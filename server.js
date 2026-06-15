@@ -6,7 +6,9 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const apiKey = process.env.ANTHROPIC_API_KEY;
+console.log('API Key loaded:', apiKey ? 'YES (' + apiKey.substring(0, 10) + '...)' : 'NO - MISSING');
+const anthropic = new Anthropic({ apiKey });
 
 // Health check
 app.get('/', (req, res) => res.json({ status: 'El Hakim Backend OK' }));
