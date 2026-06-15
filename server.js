@@ -6,6 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 
+const anthropic = new Anthropic();
+
 // Health check
 app.get('/', (req, res) => {
   const hasKey = !!process.env.ANTHROPIC_API_KEY;
