@@ -20,8 +20,8 @@ app.post('/api/claude/chat', async (req, res) => {
     const { messages, systemPrompt } = req.body;
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      system: systemPrompt ?? 'Tu es El Hakim, un assistant médical expert pour les médecins algériens. Réponds en français médical clair et précis.',
+      max_tokens: 600,
+      system: (systemPrompt ?? 'Tu es El Hakim, un assistant médical expert pour les médecins algériens.') + ' Sois CONCIS : maximum 3-4 phrases ou 5 points. Pas d\'introduction ni de conclusion. Va droit au but.',
       messages,
     });
     res.json({ content: response.content[0].text });
