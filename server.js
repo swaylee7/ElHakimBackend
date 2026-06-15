@@ -6,12 +6,11 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 
-const apiKey = process.env.ANTHROPIC_API_KEY;
-console.log('API Key loaded:', apiKey ? 'YES (' + apiKey.substring(0, 10) + '...)' : 'NO - MISSING');
-const anthropic = new Anthropic({ apiKey });
-
 // Health check
-app.get('/', (req, res) => res.json({ status: 'El Hakim Backend OK' }));
+app.get('/', (req, res) => {
+  const hasKey = !!process.env.ANTHROPIC_API_KEY;
+  res.json({ status: 'El Hakim Backend OK', apiKey: hasKey ? 'SET' : 'MISSING' });
+});
 
 // Claude chat
 app.post('/api/claude/chat', async (req, res) => {
