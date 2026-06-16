@@ -224,7 +224,7 @@ async function processPublicationQueue() {
   if (isPublishing || publicationQueue.length === 0 || !supabase) return;
   isPublishing = true;
   try {
-    const batch = publicationQueue.splice(0, 3);
+    const batch = publicationQueue.splice(0, 10);
 
     // Translate EN/AR articles before publishing
     await Promise.all(batch.map(async (item) => {
@@ -262,7 +262,7 @@ async function processPublicationQueue() {
   }
 }
 
-setInterval(processPublicationQueue, 30_000);
+setInterval(processPublicationQueue, 15_000);
 
 // ─── Cleanup: delete articles > 45 days ───────────────────────────────────────
 async function cleanupOldArticles() {
@@ -485,11 +485,25 @@ async function cronFetchAndEnqueue() {
     // Only queue articles not yet in DB
     const newArticles = live.filter(a => !existingIds.has(a.id));
 
-    if (newArticles.length > 0) {
-      publicationQueue.push(...newArticles);
-      console.log(`[CRON] ${newArticles.length} new articles queued (${publicationQueue.length} total pending)`);
-    } else {
+    if (newArticles.length === 0) {
       console.log(`[CRON] No new articles — pool is up to date`);
+    } else {
+      // FR articles → publish immediately (no translation needed)
+      const frArticles    = newArticles.filter(a => !a._lang);
+      const transArticles = newArticles.filter(a => a._lang === 'en' || a._lang === 'ar');
+
+      if (frArticles.length > 0) {
+        const clean = frArticles.map(a => { const c = { ...a }; delete c._lang; return c; });
+        const { error } = await supabase.from('actualites').upsert(clean, { onConflict: 'id', ignoreDuplicates: true });
+        if (error) console.error('[CRON] FR publish error:', error.message);
+        else console.log(`[CRON] Published ${frArticles.length} FR articles immediately`);
+      }
+
+      // EN/AR articles → queue for translation
+      if (transArticles.length > 0) {
+        publicationQueue.push(...transArticles);
+        console.log(`[CRON] Queued ${transArticles.length} EN/AR articles for translation`);
+      }
     }
 
     // Update memory cache (without internal flags)
