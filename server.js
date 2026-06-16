@@ -9,17 +9,16 @@ app.use(express.json({ limit: '50mb' }));
 
 const anthropic = new Anthropic();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL ?? '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
-);
+const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
+  ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
 
 // Health check
 app.get('/', (req, res) => {
   res.json({
     status: 'El Hakim Backend OK',
     apiKey: !!process.env.ANTHROPIC_API_KEY ? 'SET' : 'MISSING',
-    supabase: !!process.env.SUPABASE_URL ? 'SET' : 'MISSING',
+    supabase: !!process.env.SUPABASE_URL ? 'SET' : 'MISSING (ajouter dans Railway Variables)',
   });
 });
 
@@ -64,6 +63,7 @@ app.post('/api/claude/analyze-image', async (req, res) => {
 
 // Upload chat media (photo or video) — uses service_role to bypass RLS
 app.post('/api/upload/chat-media', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY non configurés dans Railway' });
   try {
     const { base64, mimeType, senderId, fileName } = req.body;
     if (!base64 || !mimeType || !senderId) {
