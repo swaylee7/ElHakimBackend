@@ -254,6 +254,13 @@ async function fetchLiveNews() {
     })
   );
 
+  // Log which feeds succeeded / failed
+  RSS_FEEDS.forEach((feed, i) => {
+    const r = results[i];
+    if (r.status === 'fulfilled') console.log(`[RSS] OK  (${r.value.items.length} items) ${feed.source}`);
+    else console.log(`[RSS] FAIL ${feed.source} — ${r.reason?.message || r.reason}`);
+  });
+
   const collected = [];
   const seenIds = new Set();
 
