@@ -33,38 +33,40 @@ const rssParser = new Parser({
 // ─── 24 sources RSS — Algériennes en premier ───────────────────────────────────
 const RSS_FEEDS = [
   // ① ALGÉRIE — Sources officielles et médias nationaux
-  { url: 'http://www.aps.dz/rss/sante',                                              source: 'APS Algérie',           priority: 1 },
-  { url: 'https://www.tsa-algerie.com/feed/',                                        source: 'TSA Algérie',           priority: 1 },
-  { url: 'https://www.elwatan.com/feed/',                                            source: 'El Watan',              priority: 1 },
-  { url: 'https://www.liberte-algerie.com/rss/',                                     source: 'Liberté Algérie',       priority: 1 },
-  { url: 'https://www.algerie360.com/feed/',                                         source: 'Algérie 360',           priority: 1 },
-  { url: 'https://www.dzbreaking.com/feed/',                                         source: 'DZ Breaking',           priority: 1 },
+  // medicalOnly: false = filtre médical appliqué (sites généralistes)
+  { url: 'http://www.aps.dz/rss/sante',                                              source: 'APS Algérie',           priority: 1, medicalOnly: true  },
+  { url: 'https://www.aps.dz/rss/sante',                                             source: 'APS Algérie',           priority: 1, medicalOnly: true  },
+  { url: 'https://www.tsa-algerie.com/feed/',                                        source: 'TSA Algérie',           priority: 1, medicalOnly: false },
+  { url: 'https://www.elwatan.com/feed/',                                            source: 'El Watan',              priority: 1, medicalOnly: false },
+  { url: 'https://www.liberte-algerie.com/rss/',                                     source: 'Liberté Algérie',       priority: 1, medicalOnly: false },
+  { url: 'https://www.algerie360.com/feed/',                                         source: 'Algérie 360',           priority: 1, medicalOnly: false },
+  { url: 'https://www.dzbreaking.com/feed/',                                         source: 'DZ Breaking',           priority: 1, medicalOnly: false },
 
   // ② OMS & OFFICIELLES MONDIALES
-  { url: 'https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml',             source: 'OMS Mondial',          priority: 2 },
-  { url: 'https://www.afro.who.int/rss/news.xml',                                   source: 'OMS Afrique',          priority: 2 },
-  { url: 'https://www.ecdc.europa.eu/sites/default/files/feeds/rss/news.rss',        source: 'ECDC Europe',          priority: 2 },
-  { url: 'https://www.unicef.org/rss/feeds/news-releases.rss',                       source: 'UNICEF Santé',         priority: 2 },
+  { url: 'https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml',             source: 'OMS Mondial',          priority: 2, medicalOnly: true },
+  { url: 'https://www.afro.who.int/rss/news.xml',                                   source: 'OMS Afrique',          priority: 2, medicalOnly: true },
+  { url: 'https://www.ecdc.europa.eu/sites/default/files/feeds/rss/news.rss',        source: 'ECDC Europe',          priority: 2, medicalOnly: true },
+  { url: 'https://www.unicef.org/rss/feeds/news-releases.rss',                       source: 'UNICEF Santé',         priority: 2, medicalOnly: false },
 
   // ③ OFFICIELLES FRANÇAISES
-  { url: 'https://www.has-sante.fr/jcms/jcms_a_15/fr/rss-toutes-les-actualites.xml',source: 'HAS France',           priority: 2 },
-  { url: 'https://ansm.sante.fr/rss/actualites.rss',                                 source: 'ANSM France',          priority: 2 },
-  { url: 'https://www.santepubliquefrance.fr/rss/actualites.rss',                    source: 'Santé Publique France', priority: 2 },
+  { url: 'https://www.has-sante.fr/jcms/jcms_a_15/fr/rss-toutes-les-actualites.xml',source: 'HAS France',           priority: 2, medicalOnly: true },
+  { url: 'https://ansm.sante.fr/rss/actualites.rss',                                 source: 'ANSM France',          priority: 2, medicalOnly: true },
+  { url: 'https://www.santepubliquefrance.fr/rss/actualites.rss',                    source: 'Santé Publique France', priority: 2, medicalOnly: true },
 
   // ④ MÉDIAS MÉDICAUX FRANCOPHONES
-  { url: 'https://www.lemonde.fr/sante/rss_full.xml',                                source: 'Le Monde Santé',       priority: 3 },
-  { url: 'https://sante.lefigaro.fr/sante/rss.xml',                                  source: 'Le Figaro Santé',      priority: 3 },
-  { url: 'https://www.20minutes.fr/feeds/rss/actu/sante.xml',                        source: '20 Minutes Santé',     priority: 3 },
-  { url: 'https://www.pourquoidocteur.fr/rss',                                       source: 'Pourquoi Docteur',     priority: 3 },
-  { url: 'https://www.vidal.fr/rss/actualites.xml',                                  source: 'Vidal Pro',            priority: 3 },
+  { url: 'https://www.lemonde.fr/sante/rss_full.xml',                                source: 'Le Monde Santé',       priority: 3, medicalOnly: true },
+  { url: 'https://sante.lefigaro.fr/sante/rss.xml',                                  source: 'Le Figaro Santé',      priority: 3, medicalOnly: true },
+  { url: 'https://www.20minutes.fr/feeds/rss/actu/sante.xml',                        source: '20 Minutes Santé',     priority: 3, medicalOnly: true },
+  { url: 'https://www.pourquoidocteur.fr/rss',                                       source: 'Pourquoi Docteur',     priority: 3, medicalOnly: true },
+  { url: 'https://www.vidal.fr/rss/actualites.xml',                                  source: 'Vidal Pro',            priority: 3, medicalOnly: true },
 
   // ⑤ JOURNAUX MÉDICAUX INTERNATIONAUX
-  { url: 'https://www.thelancet.com/rssfeed/lancet_current.xml',                     source: 'The Lancet',           priority: 3 },
-  { url: 'https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss',          source: 'NEJM',                 priority: 3 },
-  { url: 'https://www.bmj.com/rss/current.xml',                                      source: 'BMJ',                  priority: 3 },
-  { url: 'https://www.eurekalert.org/rss/medicine.xml',                              source: 'EurekAlert Médecine',  priority: 3 },
-  { url: 'https://www.medicalnewstoday.com/rss',                                     source: 'Medical News Today',   priority: 3 },
-  { url: 'https://www.diabetes.co.uk/news/feed.xml',                                 source: 'Diabetes News',        priority: 3 },
+  { url: 'https://www.thelancet.com/rssfeed/lancet_current.xml',                     source: 'The Lancet',           priority: 3, medicalOnly: true },
+  { url: 'https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss',          source: 'NEJM',                 priority: 3, medicalOnly: true },
+  { url: 'https://www.bmj.com/rss/current.xml',                                      source: 'BMJ',                  priority: 3, medicalOnly: true },
+  { url: 'https://www.eurekalert.org/rss/medicine.xml',                              source: 'EurekAlert Médecine',  priority: 3, medicalOnly: true },
+  { url: 'https://www.medicalnewstoday.com/rss',                                     source: 'Medical News Today',   priority: 3, medicalOnly: true },
+  { url: 'https://www.diabetes.co.uk/news/feed.xml',                                 source: 'Diabetes News',        priority: 3, medicalOnly: true },
 ];
 
 // ─── Détection de catégorie par mots-clés ──────────────────────────────────────
@@ -88,6 +90,13 @@ function detectCategorie(text) {
   if (/ortho|fracture|os|articulation|ligament|vertèbre|rachis/.test(t)) return 'Orthopédie';
   if (/urgence|réanimation|rea|soins intensifs|trauma/.test(t)) return 'Urgences';
   return 'Général';
+}
+
+// ─── Filtre pertinence médicale (pour sites généralistes) ────────────────────
+const MEDICAL_KW = /santé|médical|médecin|hôpital|clinique|traitement|maladie|vaccin|virus|bactér|chirurgie|thérapie|médicament|patient|docteur|infirmier|diagnostic|symptôme|épidémie|pandémie|cancer|diabète|hypertension|cardio|neuro|pneumo|pédia|gynéco|psychia|ortho|dermato|ophtalmo|urgence|soins|pharmacie|laboratoire|analyse médicale|examen médical|imagerie|radiologie|infectieux|chirurgical|vaccination|immunisation|antibiotiqu|pandémie|épidémio|pathologie|anatom|physiolog/;
+
+function isMedical(text) {
+  return MEDICAL_KW.test((text || '').toLowerCase());
 }
 
 // ─── Extraction de l'image depuis un item RSS ──────────────────────────────────
@@ -124,6 +133,7 @@ async function fetchLiveNews() {
       if (feed.priority !== prio) continue;
       for (const item of items.slice(0, 6)) {
         const text = (item.title || '') + ' ' + (item.contentSnippet || item.summary || '');
+        if (!feed.medicalOnly && !isMedical(text)) continue;
         collected.push({
           id: `rss-${Buffer.from(item.link || item.guid || item.title || String(Date.now())).toString('base64').slice(0, 22)}`,
           titre: (item.title || '').trim(),
@@ -232,11 +242,12 @@ app.get('/api/news/medical', async (req, res) => {
 
   try {
     const live = await fetchLiveNews();
-    const articles = live.length >= 5 ? live : [...live, ...STATIC_ARTICLES];
-    // Deduplicate by ID
+    // Toujours combiner live + statique ; live en premier (plus récent)
+    const combined = [...live, ...STATIC_ARTICLES];
     const seen = new Set();
-    const deduped = articles.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
+    const deduped = combined.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
     newsCache = { articles: deduped, fetchedAt: now };
+    console.log(`News cache: ${live.length} live + ${STATIC_ARTICLES.length} static = ${deduped.length} total`);
     res.json(deduped);
   } catch (e) {
     console.error('News fetch error:', e.message);
