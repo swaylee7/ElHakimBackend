@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
+const Parser = require('rss-parser');
 
 const app = express();
 app.use(cors());
@@ -13,16 +14,157 @@ const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_
   ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
   : null;
 
-// Health check
+// ─── RSS Parser ────────────────────────────────────────────────────────────────
+const rssParser = new Parser({
+  customFields: {
+    item: [
+      ['media:content', 'mediaContent'],
+      ['media:thumbnail', 'mediaThumbnail'],
+      ['content:encoded', 'contentEncoded'],
+    ],
+  },
+  timeout: 7000,
+  headers: {
+    'User-Agent': 'ElHakim Medical News Bot/1.0',
+    'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+  },
+});
+
+// ─── 24 sources RSS — Algériennes en premier ───────────────────────────────────
+const RSS_FEEDS = [
+  // ① ALGÉRIE — Sources officielles et médias nationaux
+  { url: 'http://www.aps.dz/rss/sante',                                              source: 'APS Algérie',           priority: 1 },
+  { url: 'https://www.tsa-algerie.com/feed/',                                        source: 'TSA Algérie',           priority: 1 },
+  { url: 'https://www.elwatan.com/feed/',                                            source: 'El Watan',              priority: 1 },
+  { url: 'https://www.liberte-algerie.com/rss/',                                     source: 'Liberté Algérie',       priority: 1 },
+  { url: 'https://www.algerie360.com/feed/',                                         source: 'Algérie 360',           priority: 1 },
+  { url: 'https://www.dzbreaking.com/feed/',                                         source: 'DZ Breaking',           priority: 1 },
+
+  // ② OMS & OFFICIELLES MONDIALES
+  { url: 'https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml',             source: 'OMS Mondial',          priority: 2 },
+  { url: 'https://www.afro.who.int/rss/news.xml',                                   source: 'OMS Afrique',          priority: 2 },
+  { url: 'https://www.ecdc.europa.eu/sites/default/files/feeds/rss/news.rss',        source: 'ECDC Europe',          priority: 2 },
+  { url: 'https://www.unicef.org/rss/feeds/news-releases.rss',                       source: 'UNICEF Santé',         priority: 2 },
+
+  // ③ OFFICIELLES FRANÇAISES
+  { url: 'https://www.has-sante.fr/jcms/jcms_a_15/fr/rss-toutes-les-actualites.xml',source: 'HAS France',           priority: 2 },
+  { url: 'https://ansm.sante.fr/rss/actualites.rss',                                 source: 'ANSM France',          priority: 2 },
+  { url: 'https://www.santepubliquefrance.fr/rss/actualites.rss',                    source: 'Santé Publique France', priority: 2 },
+
+  // ④ MÉDIAS MÉDICAUX FRANCOPHONES
+  { url: 'https://www.lemonde.fr/sante/rss_full.xml',                                source: 'Le Monde Santé',       priority: 3 },
+  { url: 'https://sante.lefigaro.fr/sante/rss.xml',                                  source: 'Le Figaro Santé',      priority: 3 },
+  { url: 'https://www.20minutes.fr/feeds/rss/actu/sante.xml',                        source: '20 Minutes Santé',     priority: 3 },
+  { url: 'https://www.pourquoidocteur.fr/rss',                                       source: 'Pourquoi Docteur',     priority: 3 },
+  { url: 'https://www.vidal.fr/rss/actualites.xml',                                  source: 'Vidal Pro',            priority: 3 },
+
+  // ⑤ JOURNAUX MÉDICAUX INTERNATIONAUX
+  { url: 'https://www.thelancet.com/rssfeed/lancet_current.xml',                     source: 'The Lancet',           priority: 3 },
+  { url: 'https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss',          source: 'NEJM',                 priority: 3 },
+  { url: 'https://www.bmj.com/rss/current.xml',                                      source: 'BMJ',                  priority: 3 },
+  { url: 'https://www.eurekalert.org/rss/medicine.xml',                              source: 'EurekAlert Médecine',  priority: 3 },
+  { url: 'https://www.medicalnewstoday.com/rss',                                     source: 'Medical News Today',   priority: 3 },
+  { url: 'https://www.diabetes.co.uk/news/feed.xml',                                 source: 'Diabetes News',        priority: 3 },
+];
+
+// ─── Détection de catégorie par mots-clés ──────────────────────────────────────
+function detectCategorie(text) {
+  const t = (text || '').toLowerCase();
+  if (/cardio|cardiaque|infarctus|hta|hypertension|arythmie|coronaire|péricardite|insuffisance cardiaque/.test(t)) return 'Cardiologie';
+  if (/diab|insuline|glyc|hba1c|sglt2|metformine|pancréas|glucos/.test(t)) return 'Diabétologie';
+  if (/endocrin|thyroïde|hormones|surrénale|hypophyse|cortisol|métabolisme/.test(t)) return 'Endocrinologie';
+  if (/antibio|bactérie|infection|sepsis|pneumonie|virus|covid|grippe|résistance antimicro|parasit|fièvre/.test(t)) return 'Infectiologie';
+  if (/cancer|tumeur|oncol|chimioth|immunoth|carcinome|métastase|lymphome|leucémie|biopsie/.test(t)) return 'Oncologie';
+  if (/neuro|avc|accident vasculaire|alzheimer|parkinson|épilepsie|migraine|sclérose|méningite|démence/.test(t)) return 'Neurologie';
+  if (/pédiat|enfant|nourrisson|infantile|néonatal|pediatr|nouveau-né/.test(t)) return 'Pédiatrie';
+  if (/vaccin|vaccination|immunis|immunisation/.test(t)) return 'Vaccination';
+  if (/gynéco|obstétr|grossesse|utérus|ovaire|sein|maternité|accouchement|fertilité|ménopause/.test(t)) return 'Gynécologie';
+  if (/pneumo|poumon|bpco|asthme|respiratoire|bronche|pleural|toux chronique/.test(t)) return 'Pneumologie';
+  if (/derma|peau|psoriasis|eczéma|érythème|cutané|acné|mélanome/.test(t)) return 'Dermatologie';
+  if (/ophtalmo|oeil|yeux|vision|rétine|glaucome|cataracte/.test(t)) return 'Ophtalmologie';
+  if (/radio|imagerie|irm|scanner|échographie|tomodensitom|radiolog/.test(t)) return 'Radiologie';
+  if (/chirurgie|opération|greffe|transplant|laparoscop/.test(t)) return 'Chirurgie';
+  if (/psychiatr|psychol|dépression|anxiété|schizoph|bipol|santé mentale/.test(t)) return 'Psychiatrie';
+  if (/ortho|fracture|os|articulation|ligament|vertèbre|rachis/.test(t)) return 'Orthopédie';
+  if (/urgence|réanimation|rea|soins intensifs|trauma/.test(t)) return 'Urgences';
+  return 'Général';
+}
+
+// ─── Extraction de l'image depuis un item RSS ──────────────────────────────────
+function extractImage(item) {
+  if (item.enclosure?.url) {
+    const u = item.enclosure.url;
+    if (u.match(/\.(jpe?g|png|gif|webp)(\?.*)?$/i) || item.enclosure.type?.startsWith('image/')) return u;
+  }
+  if (item.mediaContent?.$?.url) return item.mediaContent.$.url;
+  if (item.mediaThumbnail?.$?.url) return item.mediaThumbnail.$.url;
+  const html = item.contentEncoded || item.content || item.summary || '';
+  const m = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (m?.[1] && !m[1].endsWith('.gif')) return m[1];
+  return null;
+}
+
+// ─── Cache mémoire (2 heures) ──────────────────────────────────────────────────
+let newsCache = { articles: [], fetchedAt: 0 };
+const CACHE_TTL = 2 * 60 * 60 * 1000;
+
+async function fetchLiveNews() {
+  const results = await Promise.allSettled(
+    RSS_FEEDS.map(async (feed) => {
+      const parsed = await rssParser.parseURL(feed.url);
+      return { feed, items: parsed.items || [] };
+    })
+  );
+
+  const collected = [];
+  for (const prio of [1, 2, 3]) {
+    for (const r of results) {
+      if (r.status !== 'fulfilled') continue;
+      const { feed, items } = r.value;
+      if (feed.priority !== prio) continue;
+      for (const item of items.slice(0, 6)) {
+        const text = (item.title || '') + ' ' + (item.contentSnippet || item.summary || '');
+        collected.push({
+          id: `rss-${Buffer.from(item.link || item.guid || item.title || String(Date.now())).toString('base64').slice(0, 22)}`,
+          titre: (item.title || '').trim(),
+          contenu: (item.contentSnippet || item.summary || item.content || '').replace(/<[^>]+>/g, '').trim(),
+          source: feed.source,
+          categorie: detectCategorie(text),
+          date_publication: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+          image_url: extractImage(item),
+        });
+      }
+    }
+  }
+
+  return collected;
+}
+
+// ─── Static fallback ───────────────────────────────────────────────────────────
+const STATIC_ARTICLES = [
+  { id: 's1', titre: 'Nouvelles recommandations HTA 2025 — ESC/ESH', contenu: 'Les sociétés savantes internationales publient de nouvelles lignes directrices pour la prise en charge de l\'hypertension artérielle, avec un seuil d\'intervention abaissé à 130/80 mmHg pour les patients à haut risque cardiovasculaire.', source: 'ESC/ESH 2025', categorie: 'Cardiologie', date_publication: new Date().toISOString(), image_url: null },
+  { id: 's2', titre: 'Résistance aux antibiotiques en Algérie — Alerte MSPRH', contenu: 'Une étude nationale révèle une augmentation de 34% de la résistance aux céphalosporines de 3ème génération dans les infections urinaires nosocomiales.', source: 'MSPRH 2025', categorie: 'Infectiologie', date_publication: new Date(Date.now() - 86400000).toISOString(), image_url: null },
+  { id: 's3', titre: 'Vaccin antipneumococcique intégré au calendrier national', contenu: 'Le ministère de la santé annonce l\'intégration du vaccin antipneumococcique conjugué 13-valent (PCV13) dans le calendrier vaccinal national pour les nourrissons de moins de 2 ans.', source: 'MSPRH', categorie: 'Vaccination', date_publication: new Date(Date.now() - 2 * 86400000).toISOString(), image_url: null },
+  { id: 's4', titre: 'Diabète type 2 : les inhibiteurs SGLT2 en première ligne', contenu: 'Nouvelles preuves confirmant les bénéfices cardiovasculaires et rénaux des inhibiteurs SGLT2. Les recommandations ADA 2025 les positionnent en deuxième ligne après la metformine.', source: 'ADA 2025', categorie: 'Diabétologie', date_publication: new Date(Date.now() - 3 * 86400000).toISOString(), image_url: null },
+  { id: 's5', titre: 'IA diagnostique : performances égales aux radiologues', contenu: 'Une méta-analyse publiée dans The Lancet Digital Health confirme que les modèles d\'IA atteignent une sensibilité de 94% pour la détection du cancer du poumon sur TDM thoracique.', source: 'The Lancet', categorie: 'Radiologie', date_publication: new Date(Date.now() - 4 * 86400000).toISOString(), image_url: null },
+  { id: 's6', titre: 'Dépistage cancer du col utérin : passage au test HPV', contenu: 'Le programme national de dépistage envisage de remplacer le frottis cervico-vaginal par le test HPV-HR comme test primaire. Sensibilité supérieure (94% vs 72%) et intervalle de dépistage allongé à 5 ans.', source: 'MSPRH / OMS', categorie: 'Gynécologie', date_publication: new Date(Date.now() - 5 * 86400000).toISOString(), image_url: null },
+  { id: 's7', titre: 'AVC ischémique : fenêtre de thrombolyse élargie à 4h30', contenu: 'Les nouvelles recommandations ESO 2025 élargissent la fenêtre thérapeutique de thrombolyse et permettent la thrombectomie mécanique jusqu\'à 24h pour les patients sélectionnés.', source: 'ESO 2025', categorie: 'Neurologie', date_publication: new Date(Date.now() - 6 * 86400000).toISOString(), image_url: null },
+  { id: 's8', titre: 'BPCO : recommandations GOLD 2025 actualisées', contenu: 'Les recommandations GOLD 2025 introduisent une nouvelle classification basée sur les symptômes et le risque d\'exacerbations pour guider le traitement pharmacologique de la BPCO.', source: 'GOLD 2025', categorie: 'Pneumologie', date_publication: new Date(Date.now() - 7 * 86400000).toISOString(), image_url: null },
+];
+
+// ─── Health check ──────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({
     status: 'El Hakim Backend OK',
     apiKey: !!process.env.ANTHROPIC_API_KEY ? 'SET' : 'MISSING',
-    supabase: !!process.env.SUPABASE_URL ? 'SET' : 'MISSING (ajouter dans Railway Variables)',
+    supabase: !!process.env.SUPABASE_URL ? 'SET' : 'MISSING',
+    newsCache: newsCache.articles.length > 0
+      ? `${newsCache.articles.length} articles (refreshed ${Math.round((Date.now() - newsCache.fetchedAt) / 60000)}min ago)`
+      : 'empty',
   });
 });
 
-// Claude chat
+// ─── Claude chat ───────────────────────────────────────────────────────────────
 app.post('/api/claude/chat', async (req, res) => {
   try {
     const { messages, system, systemPrompt } = req.body;
@@ -39,7 +181,7 @@ app.post('/api/claude/chat', async (req, res) => {
   }
 });
 
-// Claude image analysis
+// ─── Claude image analysis ─────────────────────────────────────────────────────
 app.post('/api/claude/analyze-image', async (req, res) => {
   try {
     const { image, base64, mediaType, prompt } = req.body;
@@ -61,25 +203,17 @@ app.post('/api/claude/analyze-image', async (req, res) => {
   }
 });
 
-// Upload chat media (photo or video) — uses service_role to bypass RLS
+// ─── Upload chat media ─────────────────────────────────────────────────────────
 app.post('/api/upload/chat-media', async (req, res) => {
-  if (!supabase) return res.status(503).json({ error: 'SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY non configurés dans Railway' });
+  if (!supabase) return res.status(503).json({ error: 'SUPABASE non configuré' });
   try {
     const { base64, mimeType, senderId, fileName } = req.body;
-    if (!base64 || !mimeType || !senderId) {
-      return res.status(400).json({ error: 'base64, mimeType, senderId requis' });
-    }
-
+    if (!base64 || !mimeType || !senderId) return res.status(400).json({ error: 'base64, mimeType, senderId requis' });
     const ext = mimeType.split('/')[1]?.split(';')[0] ?? 'jpg';
     const path = `${senderId}/${Date.now()}_${fileName ?? `media.${ext}`}`;
     const buffer = Buffer.from(base64, 'base64');
-
-    const { error } = await supabase.storage
-      .from('chat-media')
-      .upload(path, buffer, { contentType: mimeType, upsert: false });
-
+    const { error } = await supabase.storage.from('chat-media').upload(path, buffer, { contentType: mimeType, upsert: false });
     if (error) throw error;
-
     const { data: urlData } = supabase.storage.from('chat-media').getPublicUrl(path);
     res.json({ url: urlData.publicUrl, path });
   } catch (e) {
@@ -87,18 +221,33 @@ app.post('/api/upload/chat-media', async (req, res) => {
   }
 });
 
-// Medical news
-app.get('/api/news/medical', (req, res) => {
-  res.json([
-    { id: '1', titre: 'Nouvelles recommandations HTA 2025 — ESC/ESH', contenu: 'Les sociétés savantes internationales publient de nouvelles lignes directrices pour la prise en charge de l\'hypertension artérielle, avec un seuil d\'intervention abaissé à 130/80 mmHg pour les patients à haut risque cardiovasculaire. L\'association IEC + diurétique thiazidique reste la bithérapie de référence.', source: 'ESC/ESH 2025', categorie: 'Cardiologie', date_publication: new Date().toISOString(), image_url: null },
-    { id: '2', titre: 'Résistance aux antibiotiques en Algérie — Alerte MSPRH', contenu: 'Une étude nationale révèle une augmentation de 34% de la résistance aux céphalosporines de 3ème génération dans les infections urinaires nosocomiales. Le MSPRH renforce les protocoles d\'antibiothérapie et recommande l\'antibiogramme systématique avant toute prescription en milieu hospitalier.', source: 'MSPRH 2025', categorie: 'Infectiologie', date_publication: new Date(Date.now() - 86400000).toISOString(), image_url: null },
-    { id: '3', titre: 'Vaccin antipneumococcique intégré au calendrier national', contenu: 'Le ministère de la santé annonce l\'intégration du vaccin antipneumococcique conjugué 13-valent (PCV13) dans le calendrier vaccinal national pour les nourrissons de moins de 2 ans, à partir de janvier 2026. Trois doses à 2, 4 et 12 mois.', source: 'MSPRH', categorie: 'Pédiatrie', date_publication: new Date(Date.now() - 2 * 86400000).toISOString(), image_url: null },
-    { id: '4', titre: 'Diabète type 2 : les inhibiteurs SGLT2 en première ligne', contenu: 'Nouvelles preuves confirmant les bénéfices cardiovasculaires et rénaux des inhibiteurs SGLT2. Les recommandations ADA 2025 les positionnent en deuxième ligne après la metformine, indépendamment du contrôle glycémique, pour les patients à haut risque CV.', source: 'ADA 2025', categorie: 'Endocrinologie', date_publication: new Date(Date.now() - 3 * 86400000).toISOString(), image_url: null },
-    { id: '5', titre: 'IA diagnostique : performances égales aux radiologues', contenu: 'Une méta-analyse publiée dans The Lancet Digital Health confirme que les modèles d\'IA atteignent une sensibilité de 94% pour la détection du cancer du poumon sur TDM thoracique.', source: 'The Lancet Digital Health', categorie: 'Radiologie', date_publication: new Date(Date.now() - 4 * 86400000).toISOString(), image_url: null },
-    { id: '6', titre: 'Insuffisance cardiaque à FE préservée : nouveautés', contenu: 'L\'essai EMPEROR-Preserved confirme le bénéfice de l\'empagliflozine dans l\'IC à FE préservée (HFpEF). Réduction de 21% des hospitalisations. L\'ESC intègre désormais les iSGLT2 dans ses recommandations HFpEF 2025.', source: 'ESC 2025', categorie: 'Cardiologie', date_publication: new Date(Date.now() - 5 * 86400000).toISOString(), image_url: null },
-    { id: '7', titre: 'Migraine chronique : anticorps anti-CGRP remboursés', contenu: 'L\'ANSM annonce la prise en charge des anticorps monoclonaux anti-CGRP pour la migraine chronique réfractaire, après échec de 3 traitements de fond. En Algérie, une demande est en cours auprès de la DPM.', source: 'ANSM / SFN 2025', categorie: 'Neurologie', date_publication: new Date(Date.now() - 6 * 86400000).toISOString(), image_url: null },
-    { id: '8', titre: 'Dépistage cancer du col utérin : passage au test HPV', contenu: 'Le programme national de dépistage envisage de remplacer le frottis cervico-vaginal par le test HPV-HR comme test primaire. Sensibilité supérieure (94% vs 72%) et intervalle de dépistage allongé à 5 ans.', source: 'MSPRH / OMS', categorie: 'Gynécologie', date_publication: new Date(Date.now() - 7 * 86400000).toISOString(), image_url: null },
-  ]);
+// ─── News médicales — 24 sources RSS + fallback statique ──────────────────────
+app.get('/api/news/medical', async (req, res) => {
+  const forceRefresh = req.query.refresh === '1';
+  const now = Date.now();
+
+  if (!forceRefresh && now - newsCache.fetchedAt < CACHE_TTL && newsCache.articles.length > 0) {
+    return res.json(newsCache.articles);
+  }
+
+  try {
+    const live = await fetchLiveNews();
+    const articles = live.length >= 5 ? live : [...live, ...STATIC_ARTICLES];
+    // Deduplicate by ID
+    const seen = new Set();
+    const deduped = articles.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
+    newsCache = { articles: deduped, fetchedAt: now };
+    res.json(deduped);
+  } catch (e) {
+    console.error('News fetch error:', e.message);
+    res.json(newsCache.articles.length > 0 ? newsCache.articles : STATIC_ARTICLES);
+  }
+});
+
+// ─── Force refresh news cache ──────────────────────────────────────────────────
+app.post('/api/news/refresh', async (req, res) => {
+  newsCache = { articles: [], fetchedAt: 0 };
+  res.json({ ok: true, message: 'Cache vidé — prochain appel /api/news/medical refetchera les RSS' });
 });
 
 const PORT = process.env.PORT || 3001;
