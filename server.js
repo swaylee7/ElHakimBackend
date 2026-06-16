@@ -470,15 +470,21 @@ async function cronFetchAndEnqueue() {
   if (!supabase) return;
   try {
     const live = await fetchLiveNews();
-    if (live.length === 0) return;
+    console.log(`[CRON] fetchLiveNews returned ${live.length} articles`);
+    if (live.length === 0) {
+      console.log('[CRON] No RSS articles fetched — all feeds may be unavailable');
+      return;
+    }
 
     // Check which IDs already exist in Supabase (avoid re-queuing)
     const ids = live.map(a => a.id);
-    const { data: existing } = await supabase
+    const { data: existing, error: selectErr } = await supabase
       .from('actualites')
       .select('id')
       .in('id', ids);
+    if (selectErr) console.warn('[CRON] ID-check error (non-fatal):', selectErr.message);
     const existingIds = new Set((existing ?? []).map(r => r.id));
+    console.log(`[CRON] ${existingIds.size} already in DB, ${live.length - existingIds.size} new`);
 
     // Only queue articles not yet in DB
     const newArticles = live.filter(a => !existingIds.has(a.id));
