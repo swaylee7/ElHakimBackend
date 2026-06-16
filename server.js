@@ -525,11 +525,25 @@ async function cronFetchAndEnqueue() {
   }
 }
 
+async function seedStaticArticles() {
+  if (!supabase) return;
+  try {
+    const { error } = await supabase
+      .from('actualites')
+      .upsert(STATIC_ARTICLES, { onConflict: 'id', ignoreDuplicates: true });
+    if (error) console.error('[SEED] Error:', error.message);
+    else console.log(`[SEED] ${STATIC_ARTICLES.length} static articles seeded`);
+  } catch (e) {
+    console.error('[SEED] Error:', e.message);
+  }
+}
+
 // Startup sequence — delay 45s to let PostgREST finish reloading its schema cache
 cleanupOldArticles();
-setTimeout(() => {
+setTimeout(async () => {
+  await seedStaticArticles();
   console.log('[CRON] Starting initial fetch...');
-  cronFetchAndEnqueue();
+  await cronFetchAndEnqueue();
 }, 45000);
 setInterval(cronFetchAndEnqueue, 12 * 60 * 60 * 1000); // Every 12h
 
