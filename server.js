@@ -23,95 +23,155 @@ const rssParser = new Parser({
       ['content:encoded', 'contentEncoded'],
     ],
   },
-  timeout: 7000,
+  timeout: 8000,
   headers: {
     'User-Agent': 'ElHakim Medical News Bot/1.0',
     'Accept': 'application/rss+xml, application/xml, text/xml, */*',
   },
 });
 
-// ─── 24 sources RSS — Algériennes en premier ───────────────────────────────────
+// ─── RSS Sources ───────────────────────────────────────────────────────────────
+// lang: 'fr' = store as-is | 'en' = translate to FR | 'ar' = store native + translate to FR
 const RSS_FEEDS = [
-  // ① ALGÉRIE — Sources officielles et médias nationaux
-  // medicalOnly: false = filtre médical appliqué (sites généralistes)
-  { url: 'http://www.aps.dz/rss/sante',                                              source: 'APS Algérie',           priority: 1, medicalOnly: true  },
-  { url: 'https://www.aps.dz/rss/sante',                                             source: 'APS Algérie',           priority: 1, medicalOnly: true  },
-  { url: 'https://www.tsa-algerie.com/feed/',                                        source: 'TSA Algérie',           priority: 1, medicalOnly: false },
-  { url: 'https://www.elwatan.com/feed/',                                            source: 'El Watan',              priority: 1, medicalOnly: false },
-  { url: 'https://www.liberte-algerie.com/rss/',                                     source: 'Liberté Algérie',       priority: 1, medicalOnly: false },
-  { url: 'https://www.algerie360.com/feed/',                                         source: 'Algérie 360',           priority: 1, medicalOnly: false },
-  { url: 'https://www.dzbreaking.com/feed/',                                         source: 'DZ Breaking',           priority: 1, medicalOnly: false },
+  // ① ALGÉRIE — Sources officielles
+  { url: 'http://www.aps.dz/rss/sante',                                               source: 'APS Algérie',           priority: 1, medicalOnly: true,  lang: 'fr', limit: 15 },
+  { url: 'https://www.aps.dz/rss/sante',                                              source: 'APS Algérie',           priority: 1, medicalOnly: true,  lang: 'fr', limit: 15 },
+  { url: 'https://www.tsa-algerie.com/feed/',                                         source: 'TSA Algérie',           priority: 1, medicalOnly: false, lang: 'fr', limit: 12 },
+  { url: 'https://www.elwatan.com/feed/',                                             source: 'El Watan',              priority: 1, medicalOnly: false, lang: 'fr', limit: 10 },
+  { url: 'https://www.algerie360.com/feed/',                                          source: 'Algérie 360',           priority: 1, medicalOnly: false, lang: 'fr', limit: 10 },
 
-  // ② OMS & OFFICIELLES MONDIALES
-  { url: 'https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml',             source: 'OMS Mondial',          priority: 2, medicalOnly: true },
-  { url: 'https://www.afro.who.int/rss/news.xml',                                   source: 'OMS Afrique',          priority: 2, medicalOnly: true },
-  { url: 'https://www.ecdc.europa.eu/sites/default/files/feeds/rss/news.rss',        source: 'ECDC Europe',          priority: 2, medicalOnly: true },
-  { url: 'https://www.unicef.org/rss/feeds/news-releases.rss',                       source: 'UNICEF Santé',         priority: 2, medicalOnly: false },
+  // ② OMS & ORGANISATIONS MONDIALES (FR)
+  { url: 'https://www.who.int/feeds/entity/mediacentre/news/fr/rss.xml',             source: 'OMS',                   priority: 1, medicalOnly: true,  lang: 'fr', limit: 15 },
+  { url: 'https://www.afro.who.int/rss/news.xml',                                    source: 'OMS Afrique',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 12 },
+  { url: 'https://www.ecdc.europa.eu/sites/default/files/feeds/rss/news.rss',        source: 'ECDC Europe',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 10 },
 
   // ③ OFFICIELLES FRANÇAISES
-  { url: 'https://www.has-sante.fr/jcms/jcms_a_15/fr/rss-toutes-les-actualites.xml',source: 'HAS France',           priority: 2, medicalOnly: true },
-  { url: 'https://ansm.sante.fr/rss/actualites.rss',                                 source: 'ANSM France',          priority: 2, medicalOnly: true },
-  { url: 'https://www.santepubliquefrance.fr/rss/actualites.rss',                    source: 'Santé Publique France', priority: 2, medicalOnly: true },
+  { url: 'https://www.has-sante.fr/jcms/jcms_a_15/fr/rss-toutes-les-actualites.xml', source: 'HAS France',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 12 },
+  { url: 'https://ansm.sante.fr/rss/actualites.rss',                                 source: 'ANSM France',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 10 },
+  { url: 'https://www.santepubliquefrance.fr/rss/actualites.rss',                    source: 'Santé Publique France', priority: 2, medicalOnly: true,  lang: 'fr', limit: 10 },
 
   // ④ MÉDIAS MÉDICAUX FRANCOPHONES
-  { url: 'https://www.lemonde.fr/sante/rss_full.xml',                                source: 'Le Monde Santé',       priority: 3, medicalOnly: true },
-  { url: 'https://sante.lefigaro.fr/sante/rss.xml',                                  source: 'Le Figaro Santé',      priority: 3, medicalOnly: true },
-  { url: 'https://www.20minutes.fr/feeds/rss/actu/sante.xml',                        source: '20 Minutes Santé',     priority: 3, medicalOnly: true },
-  { url: 'https://www.pourquoidocteur.fr/rss',                                       source: 'Pourquoi Docteur',     priority: 3, medicalOnly: true },
-  { url: 'https://www.vidal.fr/rss/actualites.xml',                                  source: 'Vidal Pro',            priority: 3, medicalOnly: true },
+  { url: 'https://www.lemonde.fr/sante/rss_full.xml',                                source: 'Le Monde Santé',        priority: 2, medicalOnly: true,  lang: 'fr', limit: 12 },
+  { url: 'https://www.pourquoidocteur.fr/rss',                                       source: 'Pourquoi Docteur',      priority: 2, medicalOnly: true,  lang: 'fr', limit: 12 },
+  { url: 'https://www.vidal.fr/rss/actualites.xml',                                  source: 'Vidal Pro',             priority: 2, medicalOnly: true,  lang: 'fr', limit: 10 },
+  { url: 'https://www.jim.fr/rss/',                                                  source: 'JIM Pro',               priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
+  { url: 'https://www.egora.fr/rss.xml',                                             source: 'Egora',                 priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
+  { url: 'https://www.allodocteurs.fr/rss.xml',                                      source: 'Allo Docteurs',         priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
+  { url: 'https://sante.lefigaro.fr/sante/rss.xml',                                  source: 'Le Figaro Santé',       priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
+  { url: 'https://www.20minutes.fr/feeds/rss/actu/sante.xml',                        source: '20 Minutes Santé',      priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
 
-  // ⑤ JOURNAUX MÉDICAUX FRANCOPHONES SUPPLÉMENTAIRES
-  { url: 'https://www.jim.fr/rss/',                                                   source: 'JIM Pro',              priority: 3, medicalOnly: true },
-  { url: 'https://www.egora.fr/rss.xml',                                             source: 'Egora',                priority: 3, medicalOnly: true },
-  { url: 'https://www.allodocteurs.fr/rss.xml',                                      source: 'Allo Docteurs',        priority: 3, medicalOnly: true },
+  // ⑤ SOURCES ANGLOPHONES (→ traduit FR par Claude Haiku)
+  { url: 'https://medicalxpress.com/rss-feed/',                                       source: 'Medical Xpress',        priority: 2, medicalOnly: true,  lang: 'en', limit: 12 },
+  { url: 'https://www.sciencedaily.com/rss/health_medicine.xml',                     source: 'Science Daily',         priority: 2, medicalOnly: true,  lang: 'en', limit: 12 },
+  { url: 'https://rss.medicalnewstoday.com/medicalnewstoday.xml',                    source: 'Medical News Today',    priority: 2, medicalOnly: true,  lang: 'en', limit: 12 },
+  { url: 'https://www.nih.gov/rss/news-releases/rss.xml',                            source: 'NIH',                   priority: 2, medicalOnly: true,  lang: 'en', limit: 10 },
+  { url: 'https://feeds.webmd.com/rss/rss.aspx?RSSSource=RSS_PUBLIC',               source: 'WebMD',                 priority: 3, medicalOnly: true,  lang: 'en', limit: 10 },
+  { url: 'https://www.thelancet.com/rssfeed/lancet_online.xml',                      source: 'The Lancet',            priority: 2, medicalOnly: true,  lang: 'en', limit: 10 },
+  { url: 'https://www.bmj.com/rss/current.xml',                                      source: 'BMJ',                   priority: 2, medicalOnly: true,  lang: 'en', limit: 10 },
+  { url: 'https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml',            source: 'WHO',                   priority: 2, medicalOnly: true,  lang: 'en', limit: 10 },
+  { url: 'https://jamanetwork.com/rss/site_3/67.xml',                               source: 'JAMA',                  priority: 3, medicalOnly: true,  lang: 'en', limit: 8  },
+  { url: 'https://www.healthline.com/rss/news',                                      source: 'Healthline',            priority: 3, medicalOnly: true,  lang: 'en', limit: 10 },
+
+  // ⑥ SOURCES ARABES (stockées nativement + traduit FR)
+  { url: 'https://www.who.int/ar/rss-feeds/news-arabic.xml',                        source: 'OMS العربية',           priority: 1, medicalOnly: true,  lang: 'ar', limit: 12 },
+  { url: 'https://www.almayadeen.net/rss/health',                                   source: 'الميادين صحة',         priority: 2, medicalOnly: true,  lang: 'ar', limit: 10 },
+  { url: 'https://arabic.rt.com/rss/news-health/',                                  source: 'RT Arabic Santé',       priority: 2, medicalOnly: true,  lang: 'ar', limit: 10 },
+  { url: 'https://www.skynewsarabia.com/feeds/rss/health',                          source: 'Sky News Arabia Santé', priority: 2, medicalOnly: true,  lang: 'ar', limit: 10 },
 ];
 
-// ─── Détection de catégorie par mots-clés ──────────────────────────────────────
-function detectCategorie(text) {
-  const t = (text || '').toLowerCase();
-  if (/cardio|cardiaque|infarctus|hta|hypertension|arythmie|coronaire|péricardite|insuffisance cardiaque/.test(t)) return 'Cardiologie';
-  if (/diab|insuline|glyc|hba1c|sglt2|metformine|pancréas|glucos/.test(t)) return 'Diabétologie';
-  if (/endocrin|thyroïde|hormones|surrénale|hypophyse|cortisol|métabolisme/.test(t)) return 'Endocrinologie';
-  if (/antibio|bactérie|infection|sepsis|pneumonie|virus|covid|grippe|résistance antimicro|parasit|fièvre/.test(t)) return 'Infectiologie';
-  if (/cancer|tumeur|oncol|chimioth|immunoth|carcinome|métastase|lymphome|leucémie|biopsie/.test(t)) return 'Oncologie';
-  if (/neuro|avc|accident vasculaire|alzheimer|parkinson|épilepsie|migraine|sclérose|méningite|démence/.test(t)) return 'Neurologie';
-  if (/pédiat|enfant|nourrisson|infantile|néonatal|pediatr|nouveau-né/.test(t)) return 'Pédiatrie';
-  if (/vaccin|vaccination|immunis|immunisation/.test(t)) return 'Vaccination';
-  if (/gynéco|obstétr|grossesse|utérus|ovaire|sein|maternité|accouchement|fertilité|ménopause/.test(t)) return 'Gynécologie';
-  if (/pneumo|poumon|bpco|asthme|respiratoire|bronche|pleural|toux chronique/.test(t)) return 'Pneumologie';
-  if (/derma|peau|psoriasis|eczéma|érythème|cutané|acné|mélanome/.test(t)) return 'Dermatologie';
-  if (/ophtalmo|oeil|yeux|vision|rétine|glaucome|cataracte/.test(t)) return 'Ophtalmologie';
-  if (/radio|imagerie|irm|scanner|échographie|tomodensitom|radiolog/.test(t)) return 'Radiologie';
-  if (/chirurgie|opération|greffe|transplant|laparoscop/.test(t)) return 'Chirurgie';
-  if (/psychiatr|psychol|dépression|anxiété|schizoph|bipol|santé mentale/.test(t)) return 'Psychiatrie';
-  if (/ortho|fracture|os|articulation|ligament|vertèbre|rachis/.test(t)) return 'Orthopédie';
-  if (/urgence|réanimation|rea|soins intensifs|trauma/.test(t)) return 'Urgences';
+// ─── Détection catégorie (FR / EN / AR) ───────────────────────────────────────
+function detectCategorie(text, lang = 'fr') {
+  const t = (text || '');
+  const tl = t.toLowerCase();
+
+  if (lang === 'ar') {
+    if (/قلب|ضغط الدم|ارتفاع الضغط|نبض|شريان/.test(t)) return 'Cardiologie';
+    if (/سرطان|ورم|أورام/.test(t)) return 'Oncologie';
+    if (/سكري|أنسولين|جلوكوز/.test(t)) return 'Diabétologie';
+    if (/مخ|أعصاب|سكتة|الزهايمر|باركنسون/.test(t)) return 'Neurologie';
+    if (/لقاح|تطعيم|تحصين/.test(t)) return 'Vaccination';
+    if (/طفل|أطفال|رضيع/.test(t)) return 'Pédiatrie';
+    if (/جراحة|عملية/.test(t)) return 'Chirurgie';
+    if (/رئة|تنفس|ربو/.test(t)) return 'Pneumologie';
+    if (/نساء|ولادة|حمل/.test(t)) return 'Gynécologie';
+    if (/عدوى|بكتيريا|فيروس|مضاد حيوي/.test(t)) return 'Infectiologie';
+    if (/جلد/.test(t)) return 'Dermatologie';
+    if (/عيون|بصر/.test(t)) return 'Ophtalmologie';
+    if (/نفسي|اكتئاب|قلق/.test(t)) return 'Psychiatrie';
+    if (/طوارئ/.test(t)) return 'Urgences';
+    return 'Général';
+  }
+
+  if (lang === 'en') {
+    if (/cardio|heart|blood pressure|hypertension|arrhythmia|coronary|myocardial/.test(tl)) return 'Cardiologie';
+    if (/cancer|tumor|oncol|chemo|carcinoma|lymphoma|leukemia|metastas/.test(tl)) return 'Oncologie';
+    if (/diabet|insulin|glucose|glycemic|hba1c|sglt/.test(tl)) return 'Diabétologie';
+    if (/neuro|stroke|alzheimer|parkinson|epilepsy|migraine|dementia|multiple sclerosis/.test(tl)) return 'Neurologie';
+    if (/vaccine|vaccination|immunization|immunis/.test(tl)) return 'Vaccination';
+    if (/pediatric|children|infant|neonatal|newborn/.test(tl)) return 'Pédiatrie';
+    if (/surgery|surgical|operation|transplant|laparoscop/.test(tl)) return 'Chirurgie';
+    if (/lung|pulmonary|copd|asthma|respiratory|pneumonia|bronchial/.test(tl)) return 'Pneumologie';
+    if (/gynecol|obstetric|pregnancy|breast cancer|ovarian|uterus/.test(tl)) return 'Gynécologie';
+    if (/antibiotic|infection|sepsis|bacteria|virus|covid|influenza|resistant/.test(tl)) return 'Infectiologie';
+    if (/dermatol|skin|psoriasis|eczema|melanoma/.test(tl)) return 'Dermatologie';
+    if (/ophthal|eye|vision|retina|glaucoma|cataract/.test(tl)) return 'Ophtalmologie';
+    if (/radiol|imaging|mri|ct scan|ultrasound|x-ray/.test(tl)) return 'Radiologie';
+    if (/psychiatry|mental health|depression|anxiety|schizophrenia|bipolar/.test(tl)) return 'Psychiatrie';
+    if (/orthoped|fracture|bone|joint|spine|vertebr/.test(tl)) return 'Orthopédie';
+    if (/emergency|trauma|icu|intensive care|resuscitation/.test(tl)) return 'Urgences';
+    if (/endocrin|thyroid|hormone|adrenal|pituitary/.test(tl)) return 'Endocrinologie';
+    return 'Général';
+  }
+
+  // FR (default)
+  if (/cardio|cardiaque|infarctus|hta|hypertension|arythmie|coronaire|insuffisance cardiaque/.test(tl)) return 'Cardiologie';
+  if (/diab|insuline|glyc|hba1c|sglt2|metformine|glucos/.test(tl)) return 'Diabétologie';
+  if (/endocrin|thyroïde|hormones|surrénale|hypophyse|cortisol/.test(tl)) return 'Endocrinologie';
+  if (/antibio|bactérie|infection|sepsis|pneumonie|virus|covid|grippe|résistance antimicro/.test(tl)) return 'Infectiologie';
+  if (/cancer|tumeur|oncol|chimioth|immunoth|carcinome|métastase|lymphome|leucémie/.test(tl)) return 'Oncologie';
+  if (/neuro|avc|alzheimer|parkinson|épilepsie|migraine|sclérose|méningite|démence/.test(tl)) return 'Neurologie';
+  if (/pédiat|enfant|nourrisson|infantile|néonatal|nouveau-né/.test(tl)) return 'Pédiatrie';
+  if (/vaccin|vaccination|immunis/.test(tl)) return 'Vaccination';
+  if (/gynéco|obstétr|grossesse|utérus|ovaire|sein|maternité|fertilité|ménopause/.test(tl)) return 'Gynécologie';
+  if (/pneumo|poumon|bpco|asthme|respiratoire|bronche/.test(tl)) return 'Pneumologie';
+  if (/derma|peau|psoriasis|eczéma|cutané|acné|mélanome/.test(tl)) return 'Dermatologie';
+  if (/ophtalmo|oeil|yeux|vision|rétine|glaucome|cataracte/.test(tl)) return 'Ophtalmologie';
+  if (/radio|imagerie|irm|scanner|échographie/.test(tl)) return 'Radiologie';
+  if (/chirurgie|opération|greffe|transplant/.test(tl)) return 'Chirurgie';
+  if (/psychiatr|dépression|anxiété|schizoph|bipol|santé mentale/.test(tl)) return 'Psychiatrie';
+  if (/ortho|fracture|os|articulation|vertèbre|rachis/.test(tl)) return 'Orthopédie';
+  if (/urgence|réanimation|soins intensifs|trauma/.test(tl)) return 'Urgences';
   return 'Général';
 }
 
-// ─── Filtre pertinence médicale (pour sites généralistes) ────────────────────
-const MEDICAL_KW = /santé|médical|médecin|hôpital|clinique|traitement|maladie|vaccin|virus|bactér|chirurgie|thérapie|médicament|patient|docteur|infirmier|diagnostic|symptôme|épidémie|pandémie|cancer|diabète|hypertension|cardio|neuro|pneumo|pédia|gynéco|psychia|ortho|dermato|ophtalmo|urgence|soins|pharmacie|laboratoire|analyse médicale|examen médical|imagerie|radiologie|infectieux|chirurgical|vaccination|immunisation|antibiotiqu|pandémie|épidémio|pathologie|anatom|physiolog/;
+// ─── Filtres pertinence médicale ───────────────────────────────────────────────
+const MEDICAL_KW_FR = /santé|médical|médecin|hôpital|clinique|traitement|maladie|vaccin|virus|bactér|chirurgie|thérapie|médicament|patient|docteur|diagnostic|symptôme|épidémie|cancer|diabète|hypertension|cardio|neuro|pneumo|pédia|gynéco|psychia|ortho|dermato|urgence|soins|pharmacie|pathologie/;
+const MEDICAL_KW_EN = /health|medical|medicine|disease|treatment|vaccine|surgery|doctor|hospital|clinical|drug|patient|therapy|cancer|diabetes|hypertension|cardio|neural|epidemi|infection|antibiotic|virus|bacteria|immune|pharma|diagnosis|symptom|pandemic/;
+const MEDICAL_KW_AR = /صحة|طبي|مرض|علاج|دواء|لقاح|جراحة|مستشفى|طبيب|مريض|وباء|فيروس|سرطان|ضغط|قلب|سكري|مضاد حيوي|تشخيص/;
 
-function isMedical(text) {
-  return MEDICAL_KW.test((text || '').toLowerCase());
+function isMedical(text, lang = 'fr') {
+  const t = text || '';
+  if (lang === 'ar') return MEDICAL_KW_AR.test(t);
+  if (lang === 'en') return MEDICAL_KW_EN.test(t.toLowerCase());
+  return MEDICAL_KW_FR.test(t.toLowerCase());
 }
 
-// ─── Nettoyage du contenu RSS ─────────────────────────────────────────────────
-function extractContent(item) {
-  const raw = item.contentSnippet || item.summary || '';
+// ─── Nettoyage contenu RSS ─────────────────────────────────────────────────────
+function extractContent(item, maxLen = 600) {
+  const raw = item.contentSnippet || item.summary || item['content:encoded'] || '';
   const cleaned = raw
-    .replace(/<[^>]+>/g, '')        // strip HTML tags
-    .replace(/LIRE\s*(L['']ARTICLE|\[\.\.\.?\]|LA SUITE)?/gi, '') // remove nav noise
+    .replace(/<[^>]+>/g, '')
+    .replace(/LIRE\s*(L['']ARTICLE|\[\.\.\.?\]|LA SUITE)?/gi, '')
     .replace(/\n{2,}/g, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim();
-  if (cleaned.length <= 500) return cleaned;
-  const cut = cleaned.slice(0, 500);
+  if (cleaned.length <= maxLen) return cleaned;
+  const cut = cleaned.slice(0, maxLen);
   const last = Math.max(cut.lastIndexOf('.'), cut.lastIndexOf('!'), cut.lastIndexOf('?'));
   return last > 80 ? cut.slice(0, last + 1) : cut + '…';
 }
 
-// ─── Extraction de l'image depuis un item RSS ──────────────────────────────────
+// ─── Extraction image ──────────────────────────────────────────────────────────
 function extractImage(item) {
   if (item.enclosure?.url) {
     const u = item.enclosure.url;
@@ -125,10 +185,104 @@ function extractImage(item) {
   return null;
 }
 
-// ─── Cache mémoire (2 heures) ──────────────────────────────────────────────────
+// ─── Translation via Claude Haiku ─────────────────────────────────────────────
+const translationCache = new Map();
+const MAX_CACHE = 2000;
+
+async function translateToFR(text, fromLang) {
+  if (!text || text.length < 10) return text || '';
+  const cacheKey = `${fromLang}:${text.slice(0, 60)}`;
+  if (translationCache.has(cacheKey)) return translationCache.get(cacheKey);
+
+  const langLabel = fromLang === 'ar' ? 'arabe' : 'anglais';
+  try {
+    const resp = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      messages: [{
+        role: 'user',
+        content: `Traduis ce texte médical de l'${langLabel} vers le français. Réponds uniquement avec la traduction, sans aucun commentaire ni explication :\n\n${text.slice(0, 800)}`,
+      }],
+    });
+    const translated = resp.content[0].text.trim();
+    if (translationCache.size >= MAX_CACHE) {
+      const firstKey = translationCache.keys().next().value;
+      translationCache.delete(firstKey);
+    }
+    translationCache.set(cacheKey, translated);
+    return translated;
+  } catch {
+    return text;
+  }
+}
+
+// ─── Publication queue (releases articles to Supabase every 30s) ───────────────
+const publicationQueue = [];
+let isPublishing = false;
+
+async function processPublicationQueue() {
+  if (isPublishing || publicationQueue.length === 0 || !supabase) return;
+  isPublishing = true;
+  try {
+    const batch = publicationQueue.splice(0, 3);
+
+    // Translate EN/AR articles before publishing
+    await Promise.all(batch.map(async (item) => {
+      if (item._lang === 'en' && !item.titre_fr) {
+        const [tf, cf] = await Promise.all([
+          translateToFR(item.titre_en || item.titre, 'en'),
+          translateToFR((item.contenu_en || item.contenu).slice(0, 700), 'en'),
+        ]);
+        item.titre_fr    = tf;
+        item.contenu_fr  = cf;
+        item.titre       = tf;
+        item.contenu     = cf;
+        item.est_traduit = true;
+      } else if (item._lang === 'ar' && !item.titre_fr) {
+        const [tf, cf] = await Promise.all([
+          translateToFR(item.titre_ar || item.titre, 'ar'),
+          translateToFR((item.contenu_ar || item.contenu).slice(0, 700), 'ar'),
+        ]);
+        item.titre_fr   = tf;
+        item.contenu_fr = cf;
+      }
+      delete item._lang; // Remove internal flag before DB insert
+    }));
+
+    const { error } = await supabase
+      .from('actualites')
+      .upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
+
+    if (error) console.error('[QUEUE] Supabase error:', error.message);
+    else console.log(`[QUEUE] Published ${batch.length} articles — ${publicationQueue.length} remaining`);
+  } catch (e) {
+    console.error('[QUEUE] Error:', e.message);
+  } finally {
+    isPublishing = false;
+  }
+}
+
+setInterval(processPublicationQueue, 30_000);
+
+// ─── Cleanup: delete articles > 45 days ───────────────────────────────────────
+async function cleanupOldArticles() {
+  if (!supabase) return;
+  try {
+    const cutoff = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+    await supabase.from('actualites').delete().lt('date_publication', cutoff);
+    console.log(`[CLEANUP] Removed articles older than 45 days`);
+  } catch (e) {
+    console.error('[CLEANUP]', e.message);
+  }
+}
+
+setInterval(cleanupOldArticles, 24 * 60 * 60 * 1000);
+
+// ─── Cache mémoire ─────────────────────────────────────────────────────────────
 let newsCache = { articles: [], fetchedAt: 0 };
 const CACHE_TTL = 2 * 60 * 60 * 1000;
 
+// ─── Fetch all RSS sources ─────────────────────────────────────────────────────
 async function fetchLiveNews() {
   const results = await Promise.allSettled(
     RSS_FEEDS.map(async (feed) => {
@@ -138,29 +292,63 @@ async function fetchLiveNews() {
   );
 
   const collected = [];
+  const seenIds = new Set();
+
   for (const prio of [1, 2, 3]) {
     for (const r of results) {
       if (r.status !== 'fulfilled') continue;
       const { feed, items } = r.value;
       if (feed.priority !== prio) continue;
-      const AGE_LIMIT_MS = feed.priority === 1 ? 90 * 864e5 : 60 * 864e5;
-      for (const item of items.slice(0, 6)) {
+      const AGE_LIMIT_MS = prio === 1 ? 90 * 864e5 : 60 * 864e5;
+      const limit = feed.limit ?? 10;
+
+      for (const item of items.slice(0, limit)) {
         if (item.pubDate) {
           const age = Date.now() - new Date(item.pubDate).getTime();
           if (age > AGE_LIMIT_MS) continue;
         }
-        const text = (item.title || '') + ' ' + (item.contentSnippet || item.summary || '');
-        if (!feed.medicalOnly && !isMedical(text)) continue;
-        collected.push({
-          id: `rss-${Buffer.from(item.link || item.guid || item.title || String(Date.now())).toString('base64').slice(0, 22)}`,
-          titre: (item.title || '').trim(),
-          contenu: extractContent(item),
-          source: feed.source,
-          categorie: detectCategorie(text),
+
+        const titleText  = (item.title || '').trim();
+        const contentText = extractContent(item);
+        const combinedText = `${titleText} ${contentText}`;
+
+        if (!feed.medicalOnly && !isMedical(combinedText, feed.lang)) continue;
+
+        const id = `rss-${Buffer.from(
+          item.link || item.guid || titleText || String(Date.now())
+        ).toString('base64').slice(0, 22)}`;
+
+        if (seenIds.has(id)) continue;
+        seenIds.add(id);
+
+        const article = {
+          id,
+          titre:            titleText,
+          contenu:          contentText,
+          source:           feed.source,
+          categorie:        detectCategorie(combinedText, feed.lang),
           date_publication: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
-          image_url: extractImage(item),
-          link: item.link || item.guid || null,
-        });
+          image_url:        extractImage(item),
+          link:             item.link || item.guid || null,
+          langue_source:    feed.lang,
+          est_traduit:      false,
+        };
+
+        // Set multilingual fields based on source language
+        if (feed.lang === 'fr') {
+          article.titre_fr   = titleText;
+          article.contenu_fr = contentText;
+        } else if (feed.lang === 'en') {
+          article.titre_en   = titleText;
+          article.contenu_en = contentText;
+          article._lang      = 'en'; // Signal: needs translation
+        } else if (feed.lang === 'ar') {
+          article.titre_ar   = titleText;
+          article.contenu_ar = contentText;
+          article._lang      = 'ar'; // Signal: needs translation
+        }
+
+        collected.push(article);
       }
     }
   }
@@ -170,24 +358,25 @@ async function fetchLiveNews() {
 
 // ─── Static fallback ───────────────────────────────────────────────────────────
 const STATIC_ARTICLES = [
-  { id: 's1', titre: 'Nouvelles recommandations HTA 2025 — ESC/ESH', contenu: 'Les sociétés savantes internationales publient de nouvelles lignes directrices pour la prise en charge de l\'hypertension artérielle, avec un seuil d\'intervention abaissé à 130/80 mmHg pour les patients à haut risque cardiovasculaire.', source: 'ESC/ESH 2025', categorie: 'Cardiologie', date_publication: new Date().toISOString(), image_url: null, link: null },
-  { id: 's2', titre: 'Résistance aux antibiotiques en Algérie — Alerte MSPRH', contenu: 'Une étude nationale révèle une augmentation de 34% de la résistance aux céphalosporines de 3ème génération dans les infections urinaires nosocomiales.', source: 'MSPRH 2025', categorie: 'Infectiologie', date_publication: new Date(Date.now() - 86400000).toISOString(), image_url: null, link: null },
-  { id: 's3', titre: 'Vaccin antipneumococcique intégré au calendrier national', contenu: 'Le ministère de la santé annonce l\'intégration du vaccin antipneumococcique conjugué 13-valent (PCV13) dans le calendrier vaccinal national pour les nourrissons de moins de 2 ans.', source: 'MSPRH', categorie: 'Vaccination', date_publication: new Date(Date.now() - 2 * 86400000).toISOString(), image_url: null, link: null },
-  { id: 's4', titre: 'Diabète type 2 : les inhibiteurs SGLT2 en première ligne', contenu: 'Nouvelles preuves confirmant les bénéfices cardiovasculaires et rénaux des inhibiteurs SGLT2. Les recommandations ADA 2025 les positionnent en deuxième ligne après la metformine.', source: 'ADA 2025', categorie: 'Diabétologie', date_publication: new Date(Date.now() - 3 * 86400000).toISOString(), image_url: null, link: null },
-  { id: 's5', titre: 'IA diagnostique : performances égales aux radiologues', contenu: 'Une méta-analyse publiée dans The Lancet Digital Health confirme que les modèles d\'IA atteignent une sensibilité de 94% pour la détection du cancer du poumon sur TDM thoracique.', source: 'The Lancet', categorie: 'Radiologie', date_publication: new Date(Date.now() - 4 * 86400000).toISOString(), image_url: null, link: null },
-  { id: 's6', titre: 'Dépistage cancer du col utérin : passage au test HPV', contenu: 'Le programme national de dépistage envisage de remplacer le frottis cervico-vaginal par le test HPV-HR comme test primaire. Sensibilité supérieure (94% vs 72%) et intervalle de dépistage allongé à 5 ans.', source: 'MSPRH / OMS', categorie: 'Gynécologie', date_publication: new Date(Date.now() - 5 * 86400000).toISOString(), image_url: null, link: null },
-  { id: 's7', titre: 'AVC ischémique : fenêtre de thrombolyse élargie à 4h30', contenu: 'Les nouvelles recommandations ESO 2025 élargissent la fenêtre thérapeutique de thrombolyse et permettent la thrombectomie mécanique jusqu\'à 24h pour les patients sélectionnés.', source: 'ESO 2025', categorie: 'Neurologie', date_publication: new Date(Date.now() - 6 * 86400000).toISOString(), image_url: null, link: null },
-  { id: 's8', titre: 'BPCO : recommandations GOLD 2025 actualisées', contenu: 'Les recommandations GOLD 2025 introduisent une nouvelle classification basée sur les symptômes et le risque d\'exacerbations pour guider le traitement pharmacologique de la BPCO.', source: 'GOLD 2025', categorie: 'Pneumologie', date_publication: new Date(Date.now() - 7 * 86400000).toISOString(), image_url: null, link: null },
+  { id: 's1', titre: 'Nouvelles recommandations HTA 2025 — ESC/ESH', titre_fr: 'Nouvelles recommandations HTA 2025 — ESC/ESH', contenu: "Les sociétés savantes ESC/ESH publient de nouvelles lignes directrices pour la prise en charge de l'hypertension artérielle, avec un seuil abaissé à 130/80 mmHg.", contenu_fr: "Les sociétés savantes ESC/ESH publient de nouvelles lignes directrices pour la prise en charge de l'hypertension artérielle, avec un seuil abaissé à 130/80 mmHg.", source: 'ESC/ESH 2025', categorie: 'Cardiologie', date_publication: new Date().toISOString(), image_url: null, link: null, langue_source: 'fr', est_traduit: false },
+  { id: 's2', titre: 'Résistance aux antibiotiques en Algérie — Alerte MSPRH', titre_fr: 'Résistance aux antibiotiques en Algérie — Alerte MSPRH', contenu: 'Une étude nationale révèle une augmentation de 34% de la résistance aux céphalosporines de 3ème génération dans les infections urinaires nosocomiales.', contenu_fr: 'Une étude nationale révèle une augmentation de 34% de la résistance aux céphalosporines de 3ème génération dans les infections urinaires nosocomiales.', source: 'MSPRH 2025', categorie: 'Infectiologie', date_publication: new Date(Date.now() - 86400000).toISOString(), image_url: null, link: null, langue_source: 'fr', est_traduit: false },
+  { id: 's3', titre: 'Vaccin antipneumococcique intégré au calendrier national', titre_fr: 'Vaccin antipneumococcique intégré au calendrier national', contenu: "Le ministère de la santé annonce l'intégration du vaccin PCV13 dans le calendrier vaccinal national pour les nourrissons de moins de 2 ans.", contenu_fr: "Le ministère de la santé annonce l'intégration du vaccin PCV13 dans le calendrier vaccinal national pour les nourrissons de moins de 2 ans.", source: 'MSPRH', categorie: 'Vaccination', date_publication: new Date(Date.now() - 2 * 86400000).toISOString(), image_url: null, link: null, langue_source: 'fr', est_traduit: false },
+  { id: 's4', titre: 'Diabète type 2 : les inhibiteurs SGLT2 en 2025', titre_fr: 'Diabète type 2 : les inhibiteurs SGLT2 en 2025', contenu: 'Nouvelles preuves confirmant les bénéfices cardiovasculaires et rénaux des inhibiteurs SGLT2. Les recommandations ADA 2025 les positionnent en deuxième ligne après la metformine.', contenu_fr: 'Nouvelles preuves confirmant les bénéfices cardiovasculaires et rénaux des inhibiteurs SGLT2. Les recommandations ADA 2025 les positionnent en deuxième ligne après la metformine.', source: 'ADA 2025', categorie: 'Diabétologie', date_publication: new Date(Date.now() - 3 * 86400000).toISOString(), image_url: null, link: null, langue_source: 'fr', est_traduit: false },
+  { id: 's5', titre: 'IA diagnostique : performances égales aux radiologues', titre_fr: 'IA diagnostique : performances égales aux radiologues', contenu: 'Une méta-analyse publiée dans The Lancet Digital Health confirme que les modèles d\'IA atteignent une sensibilité de 94% pour la détection du cancer du poumon sur TDM thoracique.', contenu_fr: 'Une méta-analyse publiée dans The Lancet Digital Health confirme que les modèles d\'IA atteignent une sensibilité de 94% pour la détection du cancer du poumon sur TDM thoracique.', source: 'The Lancet', categorie: 'Radiologie', date_publication: new Date(Date.now() - 4 * 86400000).toISOString(), image_url: null, link: null, langue_source: 'fr', est_traduit: false },
+  { id: 's6', titre: 'Dépistage cancer du col utérin : passage au test HPV', titre_fr: 'Dépistage cancer du col utérin : passage au test HPV', contenu: 'Le programme national de dépistage envisage de remplacer le frottis cervico-vaginal par le test HPV-HR. Sensibilité supérieure (94% vs 72%) et intervalle allongé à 5 ans.', contenu_fr: 'Le programme national de dépistage envisage de remplacer le frottis cervico-vaginal par le test HPV-HR. Sensibilité supérieure (94% vs 72%) et intervalle allongé à 5 ans.', source: 'MSPRH / OMS', categorie: 'Gynécologie', date_publication: new Date(Date.now() - 5 * 86400000).toISOString(), image_url: null, link: null, langue_source: 'fr', est_traduit: false },
+  { id: 's7', titre: 'AVC ischémique : fenêtre de thrombolyse élargie à 4h30', titre_fr: 'AVC ischémique : fenêtre de thrombolyse élargie à 4h30', contenu: "Les nouvelles recommandations ESO 2025 élargissent la fenêtre thérapeutique et permettent la thrombectomie mécanique jusqu'à 24h pour les patients sélectionnés.", contenu_fr: "Les nouvelles recommandations ESO 2025 élargissent la fenêtre thérapeutique et permettent la thrombectomie mécanique jusqu'à 24h pour les patients sélectionnés.", source: 'ESO 2025', categorie: 'Neurologie', date_publication: new Date(Date.now() - 6 * 86400000).toISOString(), image_url: null, link: null, langue_source: 'fr', est_traduit: false },
+  { id: 's8', titre: 'BPCO : recommandations GOLD 2025 actualisées', titre_fr: 'BPCO : recommandations GOLD 2025 actualisées', contenu: 'Les recommandations GOLD 2025 introduisent une nouvelle classification basée sur les symptômes et le risque d\'exacerbations pour guider le traitement pharmacologique de la BPCO.', contenu_fr: 'Les recommandations GOLD 2025 introduisent une nouvelle classification basée sur les symptômes et le risque d\'exacerbations pour guider le traitement pharmacologique de la BPCO.', source: 'GOLD 2025', categorie: 'Pneumologie', date_publication: new Date(Date.now() - 7 * 86400000).toISOString(), image_url: null, link: null, langue_source: 'fr', est_traduit: false },
 ];
 
 // ─── Health check ──────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.json({
     status: 'El Hakim Backend OK',
-    apiKey: !!process.env.ANTHROPIC_API_KEY ? 'SET' : 'MISSING',
-    supabase: !!process.env.SUPABASE_URL ? 'SET' : 'MISSING',
+    apiKey:    !!process.env.ANTHROPIC_API_KEY    ? 'SET' : 'MISSING',
+    supabase:  !!process.env.SUPABASE_URL          ? 'SET' : 'MISSING',
+    queue:     `${publicationQueue.length} articles pending`,
     newsCache: newsCache.articles.length > 0
-      ? `${newsCache.articles.length} articles (refreshed ${Math.round((Date.now() - newsCache.fetchedAt) / 60000)}min ago)`
+      ? `${newsCache.articles.length} articles (${Math.round((Date.now() - newsCache.fetchedAt) / 60000)}min ago)`
       : 'empty',
   });
 });
@@ -200,7 +389,7 @@ app.post('/api/claude/chat', async (req, res) => {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
-      system: sysMsg + ' Sois CONCIS : maximum 3-4 phrases ou 5 points. Pas d\'introduction ni de conclusion. Va droit au but.',
+      system: sysMsg + ' Sois CONCIS : maximum 3-4 phrases ou 5 points. Pas d\'introduction ni de conclusion.',
       messages,
     });
     res.json({ content: response.content[0].text });
@@ -213,14 +402,13 @@ app.post('/api/claude/chat', async (req, res) => {
 app.post('/api/claude/analyze-image', async (req, res) => {
   try {
     const { image, base64, mediaType, prompt } = req.body;
-    const imageData = image ?? base64;
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       messages: [{
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageData } },
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: image ?? base64 } },
           { type: 'text', text: prompt },
         ],
       }],
@@ -237,10 +425,9 @@ app.post('/api/upload/chat-media', async (req, res) => {
   try {
     const { base64, mimeType, senderId, fileName } = req.body;
     if (!base64 || !mimeType || !senderId) return res.status(400).json({ error: 'base64, mimeType, senderId requis' });
-    const ext = mimeType.split('/')[1]?.split(';')[0] ?? 'jpg';
+    const ext  = mimeType.split('/')[1]?.split(';')[0] ?? 'jpg';
     const path = `${senderId}/${Date.now()}_${fileName ?? `media.${ext}`}`;
-    const buffer = Buffer.from(base64, 'base64');
-    const { error } = await supabase.storage.from('chat-media').upload(path, buffer, { contentType: mimeType, upsert: false });
+    const { error } = await supabase.storage.from('chat-media').upload(path, Buffer.from(base64, 'base64'), { contentType: mimeType });
     if (error) throw error;
     const { data: urlData } = supabase.storage.from('chat-media').getPublicUrl(path);
     res.json({ url: urlData.publicUrl, path });
@@ -249,7 +436,7 @@ app.post('/api/upload/chat-media', async (req, res) => {
   }
 });
 
-// ─── News médicales — 24 sources RSS + fallback statique ──────────────────────
+// ─── News médicales ────────────────────────────────────────────────────────────
 app.get('/api/news/medical', async (req, res) => {
   const forceRefresh = req.query.refresh === '1';
   const now = Date.now();
@@ -260,66 +447,68 @@ app.get('/api/news/medical', async (req, res) => {
 
   try {
     const live = await fetchLiveNews();
-    // Toujours combiner live + statique ; live en premier (plus récent)
-    const combined = [...live, ...STATIC_ARTICLES];
+    // Strip internal _lang flag before sending to clients
+    const clean = live.map(a => { const c = { ...a }; delete c._lang; return c; });
+    const combined = [...clean, ...STATIC_ARTICLES];
     const seen = new Set();
     const deduped = combined.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
     newsCache = { articles: deduped, fetchedAt: now };
-    console.log(`News cache: ${live.length} live + ${STATIC_ARTICLES.length} static = ${deduped.length} total`);
+    console.log(`[API] News: ${live.length} live + ${STATIC_ARTICLES.length} static = ${deduped.length} total`);
     res.json(deduped);
   } catch (e) {
-    console.error('News fetch error:', e.message);
+    console.error('[API] News error:', e.message);
     res.json(newsCache.articles.length > 0 ? newsCache.articles : STATIC_ARTICLES);
   }
 });
 
-// ─── Force refresh news cache ──────────────────────────────────────────────────
+// ─── Force refresh ─────────────────────────────────────────────────────────────
 app.post('/api/news/refresh', async (req, res) => {
   newsCache = { articles: [], fetchedAt: 0 };
-  res.json({ ok: true, message: 'Cache vidé — prochain appel /api/news/medical refetchera les RSS' });
+  res.json({ ok: true });
 });
 
-// ─── Cron: fetch RSS → upsert Supabase every 30 min ──────────────────────────
-async function cronFetchAndUpsert() {
+// ─── Cron: fetch RSS → publication queue every 30 min ─────────────────────────
+async function cronFetchAndEnqueue() {
   if (!supabase) return;
   try {
     const live = await fetchLiveNews();
     if (live.length === 0) return;
 
-    // Map to Supabase columns
-    const rows = live.map(a => ({
-      id: a.id,
-      titre: a.titre,
-      contenu: a.contenu,
-      source: a.source,
-      categorie: a.categorie,
-      date_publication: a.date_publication,
-      image_url: a.image_url ?? null,
-      link: a.link ?? null,
-    }));
-
-    const { error } = await supabase
+    // Check which IDs already exist in Supabase (avoid re-queuing)
+    const ids = live.map(a => a.id);
+    const { data: existing } = await supabase
       .from('actualites')
-      .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+      .select('id')
+      .in('id', ids);
+    const existingIds = new Set((existing ?? []).map(r => r.id));
 
-    if (error) {
-      console.error('[CRON] Supabase upsert error:', error.message);
+    // Only queue articles not yet in DB
+    const newArticles = live.filter(a => !existingIds.has(a.id));
+
+    if (newArticles.length > 0) {
+      publicationQueue.push(...newArticles);
+      console.log(`[CRON] ${newArticles.length} new articles queued (${publicationQueue.length} total pending)`);
     } else {
-      console.log(`[CRON] Upserted ${rows.length} articles to Supabase at ${new Date().toISOString()}`);
-      // Refresh memory cache too
-      const combined = [...live, ...STATIC_ARTICLES];
-      const seen = new Set();
-      const deduped = combined.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
-      newsCache = { articles: deduped, fetchedAt: Date.now() };
+      console.log(`[CRON] No new articles — pool is up to date`);
     }
+
+    // Update memory cache (without internal flags)
+    const clean = live.map(a => { const c = { ...a }; delete c._lang; return c; });
+    const combined = [...clean, ...STATIC_ARTICLES];
+    const seen = new Set();
+    newsCache = {
+      articles: combined.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; }),
+      fetchedAt: Date.now(),
+    };
   } catch (e) {
-    console.error('[CRON] Fetch error:', e.message);
+    console.error('[CRON] Error:', e.message);
   }
 }
 
-// Run immediately on startup, then every 30 minutes
-cronFetchAndUpsert();
-setInterval(cronFetchAndUpsert, 30 * 60 * 1000);
+// Startup sequence
+cleanupOldArticles();
+cronFetchAndEnqueue();
+setInterval(cronFetchAndEnqueue, 30 * 60 * 1000);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`El Hakim Backend running on port ${PORT}`));
