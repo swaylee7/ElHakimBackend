@@ -60,19 +60,7 @@ const RSS_FEEDS = [
   { url: 'https://sante.lefigaro.fr/sante/rss.xml',                                  source: 'Le Figaro Santé',       priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
   { url: 'https://www.20minutes.fr/feeds/rss/actu/sante.xml',                        source: '20 Minutes Santé',      priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
 
-  // ⑤ SOURCES ANGLOPHONES (→ traduit FR par Claude Haiku)
-  { url: 'https://medicalxpress.com/rss-feed/',                                       source: 'Medical Xpress',        priority: 2, medicalOnly: true,  lang: 'en', limit: 12 },
-  { url: 'https://www.sciencedaily.com/rss/health_medicine.xml',                     source: 'Science Daily',         priority: 2, medicalOnly: true,  lang: 'en', limit: 12 },
-  { url: 'https://rss.medicalnewstoday.com/medicalnewstoday.xml',                    source: 'Medical News Today',    priority: 2, medicalOnly: true,  lang: 'en', limit: 12 },
-  { url: 'https://www.nih.gov/rss/news-releases/rss.xml',                            source: 'NIH',                   priority: 2, medicalOnly: true,  lang: 'en', limit: 10 },
-  { url: 'https://feeds.webmd.com/rss/rss.aspx?RSSSource=RSS_PUBLIC',               source: 'WebMD',                 priority: 3, medicalOnly: true,  lang: 'en', limit: 10 },
-  { url: 'https://www.thelancet.com/rssfeed/lancet_online.xml',                      source: 'The Lancet',            priority: 2, medicalOnly: true,  lang: 'en', limit: 10 },
-  { url: 'https://www.bmj.com/rss/current.xml',                                      source: 'BMJ',                   priority: 2, medicalOnly: true,  lang: 'en', limit: 10 },
-  { url: 'https://www.who.int/feeds/entity/mediacentre/news/en/rss.xml',            source: 'WHO',                   priority: 2, medicalOnly: true,  lang: 'en', limit: 10 },
-  { url: 'https://jamanetwork.com/rss/site_3/67.xml',                               source: 'JAMA',                  priority: 3, medicalOnly: true,  lang: 'en', limit: 8  },
-  { url: 'https://www.healthline.com/rss/news',                                      source: 'Healthline',            priority: 3, medicalOnly: true,  lang: 'en', limit: 10 },
-
-  // ⑥ SOURCES ARABES (stockées nativement + traduit FR)
+  // ⑤ SOURCES ARABES (stockées nativement + traduit FR)
   { url: 'https://www.who.int/ar/rss-feeds/news-arabic.xml',                        source: 'OMS العربية',           priority: 1, medicalOnly: true,  lang: 'ar', limit: 12 },
   { url: 'https://www.almayadeen.net/rss/health',                                   source: 'الميادين صحة',         priority: 2, medicalOnly: true,  lang: 'ar', limit: 10 },
   { url: 'https://arabic.rt.com/rss/news-health/',                                  source: 'RT Arabic Santé',       priority: 2, medicalOnly: true,  lang: 'ar', limit: 10 },
@@ -216,7 +204,7 @@ async function translateToFR(text, fromLang) {
   }
 }
 
-// ─── Publication queue (releases articles to Supabase every 30s) ───────────────
+// ─── Publication queue — 20 articles / sec (AR pre-translated before queuing) ──
 const publicationQueue = [];
 let isPublishing = false;
 
@@ -224,37 +212,12 @@ async function processPublicationQueue() {
   if (isPublishing || publicationQueue.length === 0 || !supabase) return;
   isPublishing = true;
   try {
-    const batch = publicationQueue.splice(0, 10);
-
-    // Translate EN/AR articles before publishing
-    await Promise.all(batch.map(async (item) => {
-      if (item._lang === 'en' && !item.titre_fr) {
-        const [tf, cf] = await Promise.all([
-          translateToFR(item.titre_en || item.titre, 'en'),
-          translateToFR((item.contenu_en || item.contenu).slice(0, 700), 'en'),
-        ]);
-        item.titre_fr    = tf;
-        item.contenu_fr  = cf;
-        item.titre       = tf;
-        item.contenu     = cf;
-        item.est_traduit = true;
-      } else if (item._lang === 'ar' && !item.titre_fr) {
-        const [tf, cf] = await Promise.all([
-          translateToFR(item.titre_ar || item.titre, 'ar'),
-          translateToFR((item.contenu_ar || item.contenu).slice(0, 700), 'ar'),
-        ]);
-        item.titre_fr   = tf;
-        item.contenu_fr = cf;
-      }
-      delete item._lang; // Remove internal flag before DB insert
-    }));
-
+    const batch = publicationQueue.splice(0, 20);
     const { error } = await supabase
       .from('actualites')
       .upsert(batch, { onConflict: 'id', ignoreDuplicates: true });
-
     if (error) console.error('[QUEUE] Supabase error:', error.message);
-    else console.log(`[QUEUE] Published ${batch.length} articles — ${publicationQueue.length} remaining`);
+    else console.log(`[QUEUE] Published ${batch.length} — ${publicationQueue.length} remaining`);
   } catch (e) {
     console.error('[QUEUE] Error:', e.message);
   } finally {
@@ -262,7 +225,7 @@ async function processPublicationQueue() {
   }
 }
 
-setInterval(processPublicationQueue, 15_000);
+setInterval(processPublicationQueue, 1000);
 
 // ─── Cleanup: delete articles > 45 days ───────────────────────────────────────
 async function cleanupOldArticles() {
@@ -489,20 +452,34 @@ async function cronFetchAndEnqueue() {
       console.log(`[CRON] No new articles — pool is up to date`);
     } else {
       // FR articles → publish immediately (no translation needed)
-      const frArticles    = newArticles.filter(a => !a._lang);
-      const transArticles = newArticles.filter(a => a._lang === 'en' || a._lang === 'ar');
+      const frArticles = newArticles.filter(a => !a._lang);
+      const arArticles = newArticles.filter(a => a._lang === 'ar');
 
       if (frArticles.length > 0) {
         const clean = frArticles.map(a => { const c = { ...a }; delete c._lang; return c; });
         const { error } = await supabase.from('actualites').upsert(clean, { onConflict: 'id', ignoreDuplicates: true });
-        if (error) console.error('[CRON] FR publish error:', error.message);
-        else console.log(`[CRON] Published ${frArticles.length} FR articles immediately`);
+        if (error) console.error('[CRON] FR error:', error.message);
+        else console.log(`[CRON] Published ${frArticles.length} FR immediately`);
       }
 
-      // EN/AR articles → queue for translation
-      if (transArticles.length > 0) {
-        publicationQueue.push(...transArticles);
-        console.log(`[CRON] Queued ${transArticles.length} EN/AR articles for translation`);
+      // AR articles → translate inline then queue (already-translated, no delay in queue)
+      if (arArticles.length > 0) {
+        console.log(`[CRON] Translating ${arArticles.length} AR articles...`);
+        await Promise.all(arArticles.map(async (item) => {
+          try {
+            const [tf, cf] = await Promise.all([
+              translateToFR(item.titre_ar || item.titre, 'ar'),
+              translateToFR((item.contenu_ar || item.contenu).slice(0, 700), 'ar'),
+            ]);
+            item.titre_fr   = tf;
+            item.contenu_fr = cf;
+            item.titre      = tf;
+            item.est_traduit = true;
+          } catch { /* keep original */ }
+          delete item._lang;
+        }));
+        publicationQueue.push(...arArticles);
+        console.log(`[CRON] Queued ${arArticles.length} translated AR articles`);
       }
     }
 
