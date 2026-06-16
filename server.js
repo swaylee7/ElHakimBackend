@@ -279,5 +279,47 @@ app.post('/api/news/refresh', async (req, res) => {
   res.json({ ok: true, message: 'Cache vidé — prochain appel /api/news/medical refetchera les RSS' });
 });
 
+// ─── Cron: fetch RSS → upsert Supabase every 30 min ──────────────────────────
+async function cronFetchAndUpsert() {
+  if (!supabase) return;
+  try {
+    const live = await fetchLiveNews();
+    if (live.length === 0) return;
+
+    // Map to Supabase columns
+    const rows = live.map(a => ({
+      id: a.id,
+      titre: a.titre,
+      contenu: a.contenu,
+      source: a.source,
+      categorie: a.categorie,
+      date_publication: a.date_publication,
+      image_url: a.image_url ?? null,
+      link: a.link ?? null,
+    }));
+
+    const { error } = await supabase
+      .from('actualites')
+      .upsert(rows, { onConflict: 'id', ignoreDuplicates: true });
+
+    if (error) {
+      console.error('[CRON] Supabase upsert error:', error.message);
+    } else {
+      console.log(`[CRON] Upserted ${rows.length} articles to Supabase at ${new Date().toISOString()}`);
+      // Refresh memory cache too
+      const combined = [...live, ...STATIC_ARTICLES];
+      const seen = new Set();
+      const deduped = combined.filter(a => { if (seen.has(a.id)) return false; seen.add(a.id); return true; });
+      newsCache = { articles: deduped, fetchedAt: Date.now() };
+    }
+  } catch (e) {
+    console.error('[CRON] Fetch error:', e.message);
+  }
+}
+
+// Run immediately on startup, then every 30 minutes
+cronFetchAndUpsert();
+setInterval(cronFetchAndUpsert, 30 * 60 * 1000);
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`El Hakim Backend running on port ${PORT}`));
