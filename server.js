@@ -96,6 +96,21 @@ function isMedical(text) {
   return MEDICAL_KW.test((text || '').toLowerCase());
 }
 
+// ─── Nettoyage du contenu RSS ─────────────────────────────────────────────────
+function extractContent(item) {
+  const raw = item.contentSnippet || item.summary || '';
+  const cleaned = raw
+    .replace(/<[^>]+>/g, '')        // strip HTML tags
+    .replace(/LIRE\s*(L['']ARTICLE|\[\.\.\.?\]|LA SUITE)?/gi, '') // remove nav noise
+    .replace(/\n{2,}/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  if (cleaned.length <= 500) return cleaned;
+  const cut = cleaned.slice(0, 500);
+  const last = Math.max(cut.lastIndexOf('.'), cut.lastIndexOf('!'), cut.lastIndexOf('?'));
+  return last > 80 ? cut.slice(0, last + 1) : cut + '…';
+}
+
 // ─── Extraction de l'image depuis un item RSS ──────────────────────────────────
 function extractImage(item) {
   if (item.enclosure?.url) {
@@ -128,13 +143,18 @@ async function fetchLiveNews() {
       if (r.status !== 'fulfilled') continue;
       const { feed, items } = r.value;
       if (feed.priority !== prio) continue;
+      const AGE_LIMIT_MS = feed.priority === 1 ? 90 * 864e5 : 60 * 864e5;
       for (const item of items.slice(0, 6)) {
+        if (item.pubDate) {
+          const age = Date.now() - new Date(item.pubDate).getTime();
+          if (age > AGE_LIMIT_MS) continue;
+        }
         const text = (item.title || '') + ' ' + (item.contentSnippet || item.summary || '');
         if (!feed.medicalOnly && !isMedical(text)) continue;
         collected.push({
           id: `rss-${Buffer.from(item.link || item.guid || item.title || String(Date.now())).toString('base64').slice(0, 22)}`,
           titre: (item.title || '').trim(),
-          contenu: (item.contentSnippet || item.summary || item.content || '').replace(/<[^>]+>/g, '').trim(),
+          contenu: extractContent(item),
           source: feed.source,
           categorie: detectCategorie(text),
           date_publication: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
@@ -150,14 +170,14 @@ async function fetchLiveNews() {
 
 // ─── Static fallback ───────────────────────────────────────────────────────────
 const STATIC_ARTICLES = [
-  { id: 's1', titre: 'Nouvelles recommandations HTA 2025 — ESC/ESH', contenu: 'Les sociétés savantes internationales publient de nouvelles lignes directrices pour la prise en charge de l\'hypertension artérielle, avec un seuil d\'intervention abaissé à 130/80 mmHg pour les patients à haut risque cardiovasculaire.', source: 'ESC/ESH 2025', categorie: 'Cardiologie', date_publication: new Date().toISOString(), image_url: null },
-  { id: 's2', titre: 'Résistance aux antibiotiques en Algérie — Alerte MSPRH', contenu: 'Une étude nationale révèle une augmentation de 34% de la résistance aux céphalosporines de 3ème génération dans les infections urinaires nosocomiales.', source: 'MSPRH 2025', categorie: 'Infectiologie', date_publication: new Date(Date.now() - 86400000).toISOString(), image_url: null },
-  { id: 's3', titre: 'Vaccin antipneumococcique intégré au calendrier national', contenu: 'Le ministère de la santé annonce l\'intégration du vaccin antipneumococcique conjugué 13-valent (PCV13) dans le calendrier vaccinal national pour les nourrissons de moins de 2 ans.', source: 'MSPRH', categorie: 'Vaccination', date_publication: new Date(Date.now() - 2 * 86400000).toISOString(), image_url: null },
-  { id: 's4', titre: 'Diabète type 2 : les inhibiteurs SGLT2 en première ligne', contenu: 'Nouvelles preuves confirmant les bénéfices cardiovasculaires et rénaux des inhibiteurs SGLT2. Les recommandations ADA 2025 les positionnent en deuxième ligne après la metformine.', source: 'ADA 2025', categorie: 'Diabétologie', date_publication: new Date(Date.now() - 3 * 86400000).toISOString(), image_url: null },
-  { id: 's5', titre: 'IA diagnostique : performances égales aux radiologues', contenu: 'Une méta-analyse publiée dans The Lancet Digital Health confirme que les modèles d\'IA atteignent une sensibilité de 94% pour la détection du cancer du poumon sur TDM thoracique.', source: 'The Lancet', categorie: 'Radiologie', date_publication: new Date(Date.now() - 4 * 86400000).toISOString(), image_url: null },
-  { id: 's6', titre: 'Dépistage cancer du col utérin : passage au test HPV', contenu: 'Le programme national de dépistage envisage de remplacer le frottis cervico-vaginal par le test HPV-HR comme test primaire. Sensibilité supérieure (94% vs 72%) et intervalle de dépistage allongé à 5 ans.', source: 'MSPRH / OMS', categorie: 'Gynécologie', date_publication: new Date(Date.now() - 5 * 86400000).toISOString(), image_url: null },
-  { id: 's7', titre: 'AVC ischémique : fenêtre de thrombolyse élargie à 4h30', contenu: 'Les nouvelles recommandations ESO 2025 élargissent la fenêtre thérapeutique de thrombolyse et permettent la thrombectomie mécanique jusqu\'à 24h pour les patients sélectionnés.', source: 'ESO 2025', categorie: 'Neurologie', date_publication: new Date(Date.now() - 6 * 86400000).toISOString(), image_url: null },
-  { id: 's8', titre: 'BPCO : recommandations GOLD 2025 actualisées', contenu: 'Les recommandations GOLD 2025 introduisent une nouvelle classification basée sur les symptômes et le risque d\'exacerbations pour guider le traitement pharmacologique de la BPCO.', source: 'GOLD 2025', categorie: 'Pneumologie', date_publication: new Date(Date.now() - 7 * 86400000).toISOString(), image_url: null },
+  { id: 's1', titre: 'Nouvelles recommandations HTA 2025 — ESC/ESH', contenu: 'Les sociétés savantes internationales publient de nouvelles lignes directrices pour la prise en charge de l\'hypertension artérielle, avec un seuil d\'intervention abaissé à 130/80 mmHg pour les patients à haut risque cardiovasculaire.', source: 'ESC/ESH 2025', categorie: 'Cardiologie', date_publication: new Date().toISOString(), image_url: null, link: null },
+  { id: 's2', titre: 'Résistance aux antibiotiques en Algérie — Alerte MSPRH', contenu: 'Une étude nationale révèle une augmentation de 34% de la résistance aux céphalosporines de 3ème génération dans les infections urinaires nosocomiales.', source: 'MSPRH 2025', categorie: 'Infectiologie', date_publication: new Date(Date.now() - 86400000).toISOString(), image_url: null, link: null },
+  { id: 's3', titre: 'Vaccin antipneumococcique intégré au calendrier national', contenu: 'Le ministère de la santé annonce l\'intégration du vaccin antipneumococcique conjugué 13-valent (PCV13) dans le calendrier vaccinal national pour les nourrissons de moins de 2 ans.', source: 'MSPRH', categorie: 'Vaccination', date_publication: new Date(Date.now() - 2 * 86400000).toISOString(), image_url: null, link: null },
+  { id: 's4', titre: 'Diabète type 2 : les inhibiteurs SGLT2 en première ligne', contenu: 'Nouvelles preuves confirmant les bénéfices cardiovasculaires et rénaux des inhibiteurs SGLT2. Les recommandations ADA 2025 les positionnent en deuxième ligne après la metformine.', source: 'ADA 2025', categorie: 'Diabétologie', date_publication: new Date(Date.now() - 3 * 86400000).toISOString(), image_url: null, link: null },
+  { id: 's5', titre: 'IA diagnostique : performances égales aux radiologues', contenu: 'Une méta-analyse publiée dans The Lancet Digital Health confirme que les modèles d\'IA atteignent une sensibilité de 94% pour la détection du cancer du poumon sur TDM thoracique.', source: 'The Lancet', categorie: 'Radiologie', date_publication: new Date(Date.now() - 4 * 86400000).toISOString(), image_url: null, link: null },
+  { id: 's6', titre: 'Dépistage cancer du col utérin : passage au test HPV', contenu: 'Le programme national de dépistage envisage de remplacer le frottis cervico-vaginal par le test HPV-HR comme test primaire. Sensibilité supérieure (94% vs 72%) et intervalle de dépistage allongé à 5 ans.', source: 'MSPRH / OMS', categorie: 'Gynécologie', date_publication: new Date(Date.now() - 5 * 86400000).toISOString(), image_url: null, link: null },
+  { id: 's7', titre: 'AVC ischémique : fenêtre de thrombolyse élargie à 4h30', contenu: 'Les nouvelles recommandations ESO 2025 élargissent la fenêtre thérapeutique de thrombolyse et permettent la thrombectomie mécanique jusqu\'à 24h pour les patients sélectionnés.', source: 'ESO 2025', categorie: 'Neurologie', date_publication: new Date(Date.now() - 6 * 86400000).toISOString(), image_url: null, link: null },
+  { id: 's8', titre: 'BPCO : recommandations GOLD 2025 actualisées', contenu: 'Les recommandations GOLD 2025 introduisent une nouvelle classification basée sur les symptômes et le risque d\'exacerbations pour guider le traitement pharmacologique de la BPCO.', source: 'GOLD 2025', categorie: 'Pneumologie', date_publication: new Date(Date.now() - 7 * 86400000).toISOString(), image_url: null, link: null },
 ];
 
 // ─── Health check ──────────────────────────────────────────────────────────────
