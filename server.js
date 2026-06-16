@@ -60,13 +60,10 @@ const RSS_FEEDS = [
   { url: 'https://www.pourquoidocteur.fr/rss',                                       source: 'Pourquoi Docteur',     priority: 3, medicalOnly: true },
   { url: 'https://www.vidal.fr/rss/actualites.xml',                                  source: 'Vidal Pro',            priority: 3, medicalOnly: true },
 
-  // ⑤ JOURNAUX MÉDICAUX INTERNATIONAUX
-  { url: 'https://www.thelancet.com/rssfeed/lancet_current.xml',                     source: 'The Lancet',           priority: 3, medicalOnly: true },
-  { url: 'https://www.nejm.org/action/showFeed?jc=nejm&type=etoc&feed=rss',          source: 'NEJM',                 priority: 3, medicalOnly: true },
-  { url: 'https://www.bmj.com/rss/current.xml',                                      source: 'BMJ',                  priority: 3, medicalOnly: true },
-  { url: 'https://www.eurekalert.org/rss/medicine.xml',                              source: 'EurekAlert Médecine',  priority: 3, medicalOnly: true },
-  { url: 'https://www.medicalnewstoday.com/rss',                                     source: 'Medical News Today',   priority: 3, medicalOnly: true },
-  { url: 'https://www.diabetes.co.uk/news/feed.xml',                                 source: 'Diabetes News',        priority: 3, medicalOnly: true },
+  // ⑤ JOURNAUX MÉDICAUX FRANCOPHONES SUPPLÉMENTAIRES
+  { url: 'https://www.jim.fr/rss/',                                                   source: 'JIM Pro',              priority: 3, medicalOnly: true },
+  { url: 'https://www.egora.fr/rss.xml',                                             source: 'Egora',                priority: 3, medicalOnly: true },
+  { url: 'https://www.allodocteurs.fr/rss.xml',                                      source: 'Allo Docteurs',        priority: 3, medicalOnly: true },
 ];
 
 // ─── Détection de catégorie par mots-clés ──────────────────────────────────────
@@ -142,6 +139,7 @@ async function fetchLiveNews() {
           categorie: detectCategorie(text),
           date_publication: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
           image_url: extractImage(item),
+          link: item.link || item.guid || null,
         });
       }
     }
