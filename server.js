@@ -344,7 +344,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// ─── Claude chat ───────────────────────────────────────────────────────────────
+// ─── Claude chat (legacy non-streaming) ────────────────────────────────────────
 app.post('/api/claude/chat', async (req, res) => {
   try {
     const { messages, system, systemPrompt } = req.body;
@@ -358,6 +358,41 @@ app.post('/api/claude/chat', async (req, res) => {
     res.json({ content: response.content[0].text });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── Claude chat streaming (SSE) ───────────────────────────────────────────────
+app.post('/api/claude/chat/stream', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  const { messages, system, plan } = req.body;
+  const sysMsg = system ?? 'Tu es El Hakim, un assistant médical expert pour les médecins algériens.';
+  // Model selection by plan (Haiku for standard, Sonnet for paid plans)
+  const model = (plan === 'argent' || plan === 'premium')
+    ? 'claude-sonnet-4-6'
+    : 'claude-haiku-4-5-20251001';
+
+  try {
+    const stream = anthropic.messages.stream({
+      model,
+      max_tokens: 1500,
+      system: sysMsg,
+      messages,
+    });
+
+    stream.on('text', (text) => {
+      res.write(`data: ${JSON.stringify({ text })}\n\n`);
+    });
+
+    await stream.finalMessage();
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (e) {
+    res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+    res.end();
   }
 });
 
@@ -484,9 +519,12 @@ async function cronFetchAndEnqueue() {
   }
 }
 
-// Startup sequence
+// Startup sequence — delay 45s to let PostgREST finish reloading its schema cache
 cleanupOldArticles();
-cronFetchAndEnqueue();
+setTimeout(() => {
+  console.log('[CRON] Starting initial fetch...');
+  cronFetchAndEnqueue();
+}, 45000);
 setInterval(cronFetchAndEnqueue, 12 * 60 * 60 * 1000); // Every 12h
 
 const PORT = process.env.PORT || 3001;
