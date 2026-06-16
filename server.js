@@ -34,37 +34,37 @@ const rssParser = new Parser({
 // lang: 'fr' = store as-is | 'en' = translate to FR | 'ar' = store native + translate to FR
 const RSS_FEEDS = [
   // ① ALGÉRIE — Sources officielles
-  { url: 'http://www.aps.dz/rss/sante',                                               source: 'APS Algérie',           priority: 1, medicalOnly: true,  lang: 'fr', limit: 15 },
-  { url: 'https://www.aps.dz/rss/sante',                                              source: 'APS Algérie',           priority: 1, medicalOnly: true,  lang: 'fr', limit: 15 },
-  { url: 'https://www.tsa-algerie.com/feed/',                                         source: 'TSA Algérie',           priority: 1, medicalOnly: false, lang: 'fr', limit: 12 },
-  { url: 'https://www.elwatan.com/feed/',                                             source: 'El Watan',              priority: 1, medicalOnly: false, lang: 'fr', limit: 10 },
-  { url: 'https://www.algerie360.com/feed/',                                          source: 'Algérie 360',           priority: 1, medicalOnly: false, lang: 'fr', limit: 10 },
+  { url: 'http://www.aps.dz/rss/sante',                                               source: 'APS Algérie',           priority: 1, medicalOnly: true,  lang: 'fr', limit: 25 },
+  { url: 'https://www.aps.dz/rss/sante',                                              source: 'APS Algérie',           priority: 1, medicalOnly: true,  lang: 'fr', limit: 25 },
+  { url: 'https://www.tsa-algerie.com/feed/',                                         source: 'TSA Algérie',           priority: 1, medicalOnly: false, lang: 'fr', limit: 20 },
+  { url: 'https://www.elwatan.com/feed/',                                             source: 'El Watan',              priority: 1, medicalOnly: false, lang: 'fr', limit: 18 },
+  { url: 'https://www.algerie360.com/feed/',                                          source: 'Algérie 360',           priority: 1, medicalOnly: false, lang: 'fr', limit: 18 },
 
   // ② OMS & ORGANISATIONS MONDIALES (FR)
-  { url: 'https://www.who.int/feeds/entity/mediacentre/news/fr/rss.xml',             source: 'OMS',                   priority: 1, medicalOnly: true,  lang: 'fr', limit: 15 },
-  { url: 'https://www.afro.who.int/rss/news.xml',                                    source: 'OMS Afrique',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 12 },
-  { url: 'https://www.ecdc.europa.eu/sites/default/files/feeds/rss/news.rss',        source: 'ECDC Europe',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 10 },
+  { url: 'https://www.who.int/feeds/entity/mediacentre/news/fr/rss.xml',             source: 'OMS',                   priority: 1, medicalOnly: true,  lang: 'fr', limit: 25 },
+  { url: 'https://www.afro.who.int/rss/news.xml',                                    source: 'OMS Afrique',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
+  { url: 'https://www.ecdc.europa.eu/sites/default/files/feeds/rss/news.rss',        source: 'ECDC Europe',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 18 },
 
   // ③ OFFICIELLES FRANÇAISES
-  { url: 'https://www.has-sante.fr/jcms/jcms_a_15/fr/rss-toutes-les-actualites.xml', source: 'HAS France',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 12 },
-  { url: 'https://ansm.sante.fr/rss/actualites.rss',                                 source: 'ANSM France',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 10 },
-  { url: 'https://www.santepubliquefrance.fr/rss/actualites.rss',                    source: 'Santé Publique France', priority: 2, medicalOnly: true,  lang: 'fr', limit: 10 },
+  { url: 'https://www.has-sante.fr/jcms/jcms_a_15/fr/rss-toutes-les-actualites.xml', source: 'HAS France',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
+  { url: 'https://ansm.sante.fr/rss/actualites.rss',                                 source: 'ANSM France',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 18 },
+  { url: 'https://www.santepubliquefrance.fr/rss/actualites.rss',                    source: 'Santé Publique France', priority: 2, medicalOnly: true,  lang: 'fr', limit: 18 },
 
   // ④ MÉDIAS MÉDICAUX FRANCOPHONES
-  { url: 'https://www.lemonde.fr/sante/rss_full.xml',                                source: 'Le Monde Santé',        priority: 2, medicalOnly: true,  lang: 'fr', limit: 12 },
-  { url: 'https://www.pourquoidocteur.fr/rss',                                       source: 'Pourquoi Docteur',      priority: 2, medicalOnly: true,  lang: 'fr', limit: 12 },
-  { url: 'https://www.vidal.fr/rss/actualites.xml',                                  source: 'Vidal Pro',             priority: 2, medicalOnly: true,  lang: 'fr', limit: 10 },
-  { url: 'https://www.jim.fr/rss/',                                                  source: 'JIM Pro',               priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
-  { url: 'https://www.egora.fr/rss.xml',                                             source: 'Egora',                 priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
-  { url: 'https://www.allodocteurs.fr/rss.xml',                                      source: 'Allo Docteurs',         priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
-  { url: 'https://sante.lefigaro.fr/sante/rss.xml',                                  source: 'Le Figaro Santé',       priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
-  { url: 'https://www.20minutes.fr/feeds/rss/actu/sante.xml',                        source: '20 Minutes Santé',      priority: 3, medicalOnly: true,  lang: 'fr', limit: 10 },
+  { url: 'https://www.lemonde.fr/sante/rss_full.xml',                                source: 'Le Monde Santé',        priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
+  { url: 'https://www.pourquoidocteur.fr/rss',                                       source: 'Pourquoi Docteur',      priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
+  { url: 'https://www.vidal.fr/rss/actualites.xml',                                  source: 'Vidal Pro',             priority: 2, medicalOnly: true,  lang: 'fr', limit: 18 },
+  { url: 'https://www.jim.fr/rss/',                                                  source: 'JIM Pro',               priority: 3, medicalOnly: true,  lang: 'fr', limit: 18 },
+  { url: 'https://www.egora.fr/rss.xml',                                             source: 'Egora',                 priority: 3, medicalOnly: true,  lang: 'fr', limit: 18 },
+  { url: 'https://www.allodocteurs.fr/rss.xml',                                      source: 'Allo Docteurs',         priority: 3, medicalOnly: true,  lang: 'fr', limit: 18 },
+  { url: 'https://sante.lefigaro.fr/sante/rss.xml',                                  source: 'Le Figaro Santé',       priority: 3, medicalOnly: true,  lang: 'fr', limit: 18 },
+  { url: 'https://www.20minutes.fr/feeds/rss/actu/sante.xml',                        source: '20 Minutes Santé',      priority: 3, medicalOnly: true,  lang: 'fr', limit: 18 },
 
   // ⑤ SOURCES ARABES (stockées nativement + traduit FR)
-  { url: 'https://www.who.int/ar/rss-feeds/news-arabic.xml',                        source: 'OMS العربية',           priority: 1, medicalOnly: true,  lang: 'ar', limit: 12 },
-  { url: 'https://www.almayadeen.net/rss/health',                                   source: 'الميادين صحة',         priority: 2, medicalOnly: true,  lang: 'ar', limit: 10 },
-  { url: 'https://arabic.rt.com/rss/news-health/',                                  source: 'RT Arabic Santé',       priority: 2, medicalOnly: true,  lang: 'ar', limit: 10 },
-  { url: 'https://www.skynewsarabia.com/feeds/rss/health',                          source: 'Sky News Arabia Santé', priority: 2, medicalOnly: true,  lang: 'ar', limit: 10 },
+  { url: 'https://www.who.int/ar/rss-feeds/news-arabic.xml',                        source: 'OMS العربية',           priority: 1, medicalOnly: true,  lang: 'ar', limit: 20 },
+  { url: 'https://www.almayadeen.net/rss/health',                                   source: 'الميادين صحة',         priority: 2, medicalOnly: true,  lang: 'ar', limit: 18 },
+  { url: 'https://arabic.rt.com/rss/news-health/',                                  source: 'RT Arabic Santé',       priority: 2, medicalOnly: true,  lang: 'ar', limit: 18 },
+  { url: 'https://www.skynewsarabia.com/feeds/rss/health',                          source: 'Sky News Arabia Santé', priority: 2, medicalOnly: true,  lang: 'ar', limit: 18 },
 ];
 
 // ─── Détection catégorie (FR / EN / AR) ───────────────────────────────────────
@@ -462,24 +462,12 @@ async function cronFetchAndEnqueue() {
         else console.log(`[CRON] Published ${frArticles.length} FR immediately`);
       }
 
-      // AR articles → translate inline then queue (already-translated, no delay in queue)
+      // AR articles → publier en arabe natif (pas de traduction)
       if (arArticles.length > 0) {
-        console.log(`[CRON] Translating ${arArticles.length} AR articles...`);
-        await Promise.all(arArticles.map(async (item) => {
-          try {
-            const [tf, cf] = await Promise.all([
-              translateToFR(item.titre_ar || item.titre, 'ar'),
-              translateToFR((item.contenu_ar || item.contenu).slice(0, 700), 'ar'),
-            ]);
-            item.titre_fr   = tf;
-            item.contenu_fr = cf;
-            item.titre      = tf;
-            item.est_traduit = true;
-          } catch { /* keep original */ }
-          delete item._lang;
-        }));
-        publicationQueue.push(...arArticles);
-        console.log(`[CRON] Queued ${arArticles.length} translated AR articles`);
+        const clean = arArticles.map(a => { const c = { ...a }; delete c._lang; return c; });
+        const { error } = await supabase.from('actualites').upsert(clean, { onConflict: 'id', ignoreDuplicates: true });
+        if (error) console.error('[CRON] AR error:', error.message);
+        else console.log(`[CRON] Published ${arArticles.length} AR articles immediately`);
       }
     }
 
@@ -499,7 +487,7 @@ async function cronFetchAndEnqueue() {
 // Startup sequence
 cleanupOldArticles();
 cronFetchAndEnqueue();
-setInterval(cronFetchAndEnqueue, 30 * 60 * 1000);
+setInterval(cronFetchAndEnqueue, 12 * 60 * 60 * 1000); // Every 12h
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`El Hakim Backend running on port ${PORT}`));
