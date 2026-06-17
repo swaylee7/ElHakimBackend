@@ -33,38 +33,38 @@ const rssParser = new Parser({
 // ─── RSS Sources ───────────────────────────────────────────────────────────────
 // lang: 'fr' = store as-is | 'en' = translate to FR | 'ar' = store native + translate to FR
 const RSS_FEEDS = [
-  // ① ALGÉRIE — Sources officielles
-  { url: 'http://www.aps.dz/rss/sante',                                               source: 'APS Algérie',           priority: 1, medicalOnly: true,  lang: 'fr', limit: 25 },
-  { url: 'https://www.aps.dz/rss/sante',                                              source: 'APS Algérie',           priority: 1, medicalOnly: true,  lang: 'fr', limit: 25 },
-  { url: 'https://www.tsa-algerie.com/feed/',                                         source: 'TSA Algérie',           priority: 1, medicalOnly: false, lang: 'fr', limit: 20 },
-  { url: 'https://www.elwatan.com/feed/',                                             source: 'El Watan',              priority: 1, medicalOnly: false, lang: 'fr', limit: 18 },
-  { url: 'https://www.algerie360.com/feed/',                                          source: 'Algérie 360',           priority: 1, medicalOnly: false, lang: 'fr', limit: 18 },
+  // ① ALGÉRIE
+  { url: 'https://www.tsa-algerie.com/feed/',                                                    source: 'TSA Algérie',           priority: 1, medicalOnly: false, lang: 'fr', limit: 25 },
+  { url: 'https://www.algerie360.com/feed/',                                                     source: 'Algérie 360',           priority: 1, medicalOnly: false, lang: 'fr', limit: 25 },
+  { url: 'https://www.elmoudjahid.com/fr/rss.xml',                                              source: 'El Moudjahid',          priority: 1, medicalOnly: false, lang: 'fr', limit: 20 },
 
-  // ② OMS & ORGANISATIONS MONDIALES (FR)
-  { url: 'https://www.who.int/feeds/entity/mediacentre/news/fr/rss.xml',             source: 'OMS',                   priority: 1, medicalOnly: true,  lang: 'fr', limit: 25 },
-  { url: 'https://www.afro.who.int/rss/news.xml',                                    source: 'OMS Afrique',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
-  { url: 'https://www.ecdc.europa.eu/sites/default/files/feeds/rss/news.rss',        source: 'ECDC Europe',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 18 },
+  // ② OMS & ORGANISATIONS INTERNATIONALES
+  { url: 'https://www.who.int/rss-feeds/news-english.xml',                                      source: 'WHO News',              priority: 1, medicalOnly: true,  lang: 'en', limit: 25 },
+  { url: 'https://www.paho.org/en/rss-news',                                                    source: 'PAHO',                  priority: 2, medicalOnly: true,  lang: 'en', limit: 20 },
+  { url: 'https://www.ecdc.europa.eu/en/rss-feeds/epidemiological-data',                        source: 'ECDC',                  priority: 2, medicalOnly: true,  lang: 'en', limit: 18 },
 
-  // ③ OFFICIELLES FRANÇAISES
-  { url: 'https://www.has-sante.fr/jcms/jcms_a_15/fr/rss-toutes-les-actualites.xml', source: 'HAS France',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
-  { url: 'https://ansm.sante.fr/rss/actualites.rss',                                 source: 'ANSM France',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 18 },
-  { url: 'https://www.santepubliquefrance.fr/rss/actualites.rss',                    source: 'Santé Publique France', priority: 2, medicalOnly: true,  lang: 'fr', limit: 18 },
+  // ③ MÉDIAS MÉDICAUX FRANCOPHONES (URLs actives)
+  { url: 'https://www.lemonde.fr/sante/rss_full.xml',                                           source: 'Le Monde Santé',        priority: 2, medicalOnly: true,  lang: 'fr', limit: 25 },
+  { url: 'https://www.egora.fr/rss.xml',                                                        source: 'Egora',                 priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
+  { url: 'https://www.allodocteurs.fr/rss.xml',                                                 source: 'Allo Docteurs',         priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
+  { url: 'https://www.pourquoidocteur.fr/feed',                                                 source: 'Pourquoi Docteur',      priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
+  { url: 'https://www.lequotidiendumedecin.fr/feed',                                            source: 'Le Quotidien du Médecin', priority: 2, medicalOnly: true, lang: 'fr', limit: 20 },
+  { url: 'https://www.infirmiers.com/rss.xml',                                                  source: 'Infirmiers.com',        priority: 3, medicalOnly: true,  lang: 'fr', limit: 15 },
+  { url: 'https://www.medscape.fr/rss/homeheadlines',                                           source: 'Medscape FR',           priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
+  { url: 'https://www.jim.fr/flux_rss/rss.xml',                                                 source: 'JIM Pro',               priority: 2, medicalOnly: true,  lang: 'fr', limit: 18 },
 
-  // ④ MÉDIAS MÉDICAUX FRANCOPHONES
-  { url: 'https://www.lemonde.fr/sante/rss_full.xml',                                source: 'Le Monde Santé',        priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
-  { url: 'https://www.pourquoidocteur.fr/rss',                                       source: 'Pourquoi Docteur',      priority: 2, medicalOnly: true,  lang: 'fr', limit: 20 },
-  { url: 'https://www.vidal.fr/rss/actualites.xml',                                  source: 'Vidal Pro',             priority: 2, medicalOnly: true,  lang: 'fr', limit: 18 },
-  { url: 'https://www.jim.fr/rss/',                                                  source: 'JIM Pro',               priority: 3, medicalOnly: true,  lang: 'fr', limit: 18 },
-  { url: 'https://www.egora.fr/rss.xml',                                             source: 'Egora',                 priority: 3, medicalOnly: true,  lang: 'fr', limit: 18 },
-  { url: 'https://www.allodocteurs.fr/rss.xml',                                      source: 'Allo Docteurs',         priority: 3, medicalOnly: true,  lang: 'fr', limit: 18 },
-  { url: 'https://sante.lefigaro.fr/sante/rss.xml',                                  source: 'Le Figaro Santé',       priority: 3, medicalOnly: true,  lang: 'fr', limit: 18 },
-  { url: 'https://www.20minutes.fr/feeds/rss/actu/sante.xml',                        source: '20 Minutes Santé',      priority: 3, medicalOnly: true,  lang: 'fr', limit: 18 },
+  // ④ SOURCES ANGLAISES (traduites)
+  { url: 'https://www.medscape.com/rss/homeheadlines',                                          source: 'Medscape',              priority: 2, medicalOnly: true,  lang: 'en', limit: 25 },
+  { url: 'https://feeds.feedburner.com/nejm/rss/current',                                      source: 'NEJM',                  priority: 2, medicalOnly: true,  lang: 'en', limit: 15 },
+  { url: 'https://www.thelancet.com/rssfeed/lancet_online.xml',                                 source: 'The Lancet',            priority: 2, medicalOnly: true,  lang: 'en', limit: 15 },
+  { url: 'https://jamanetwork.com/rss/site_3/67.xml',                                           source: 'JAMA',                  priority: 2, medicalOnly: true,  lang: 'en', limit: 15 },
+  { url: 'https://www.bmj.com/rss/current.xml',                                                 source: 'BMJ',                   priority: 2, medicalOnly: true,  lang: 'en', limit: 15 },
+  { url: 'https://pubmed.ncbi.nlm.nih.gov/rss/search/2GQ_w5CGm8GFocfFwNqGCW0UOFKuKBRqSmHEzA39NsPpIE_j0I/?limit=20&utm_campaign=pubmed-2&fc=20250101000000', source: 'PubMed Médecine', priority: 3, medicalOnly: true, lang: 'en', limit: 20 },
 
-  // ⑤ SOURCES ARABES (stockées nativement + traduit FR)
-  { url: 'https://www.who.int/ar/rss-feeds/news-arabic.xml',                        source: 'OMS العربية',           priority: 1, medicalOnly: true,  lang: 'ar', limit: 20 },
-  { url: 'https://www.almayadeen.net/rss/health',                                   source: 'الميادين صحة',         priority: 2, medicalOnly: true,  lang: 'ar', limit: 18 },
-  { url: 'https://arabic.rt.com/rss/news-health/',                                  source: 'RT Arabic Santé',       priority: 2, medicalOnly: true,  lang: 'ar', limit: 18 },
-  { url: 'https://www.skynewsarabia.com/feeds/rss/health',                          source: 'Sky News Arabia Santé', priority: 2, medicalOnly: true,  lang: 'ar', limit: 18 },
+  // ⑤ SOURCES ARABES
+  { url: 'https://www.aljazeera.net/rss/health.xml',                                            source: 'الجزيرة صحة',          priority: 1, medicalOnly: true,  lang: 'ar', limit: 20 },
+  { url: 'https://arabic.cnn.com/health/rss',                                                   source: 'CNN عربي صحة',         priority: 2, medicalOnly: true,  lang: 'ar', limit: 18 },
+  { url: 'https://www.bbc.com/arabic/topics/c2ldjl9lrzwt/rss.xml',                             source: 'BBC عربي صحة',         priority: 2, medicalOnly: true,  lang: 'ar', limit: 18 },
 ];
 
 // ─── Détection catégorie (FR / EN / AR) ───────────────────────────────────────
@@ -269,14 +269,9 @@ async function fetchLiveNews() {
       if (r.status !== 'fulfilled') continue;
       const { feed, items } = r.value;
       if (feed.priority !== prio) continue;
-      const AGE_LIMIT_MS = prio === 1 ? 90 * 864e5 : 60 * 864e5;
       const limit = feed.limit ?? 10;
 
       for (const item of items.slice(0, limit)) {
-        if (item.pubDate) {
-          const age = Date.now() - new Date(item.pubDate).getTime();
-          if (age > AGE_LIMIT_MS) continue;
-        }
 
         const titleText  = (item.title || '').trim();
         const contentText = extractContent(item);
