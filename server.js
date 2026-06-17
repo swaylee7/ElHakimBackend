@@ -528,6 +528,99 @@ async function cronFetchAndEnqueue() {
   }
 }
 
+// ─── Migration route (one-time, remove after use) ────────────────────────────
+app.post('/admin/migrate', async (req, res) => {
+  const secret = req.headers['x-migration-secret'];
+  if (secret !== 'elhakim_migrate_2026') return res.status(403).json({ error: 'forbidden' });
+  if (!supabase) return res.status(500).json({ error: 'no supabase client' });
+
+  const results = [];
+
+  const migrations = [
+    // Add preferences to medecins
+    `ALTER TABLE medecins ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}'`,
+    // Fix bibliotheque table — add missing columns
+    `ALTER TABLE bibliotheque ADD COLUMN IF NOT EXISTS auteur TEXT`,
+    `ALTER TABLE bibliotheque ADD COLUMN IF NOT EXISTS description TEXT`,
+    `ALTER TABLE bibliotheque ADD COLUMN IF NOT EXISTS categorie TEXT NOT NULL DEFAULT 'Général'`,
+    `ALTER TABLE bibliotheque ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'livre'`,
+    `ALTER TABLE bibliotheque ADD COLUMN IF NOT EXISTS couverture_url TEXT`,
+    `ALTER TABLE bibliotheque ADD COLUMN IF NOT EXISTS annee INT`,
+    `ALTER TABLE bibliotheque ADD COLUMN IF NOT EXISTS langue TEXT NOT NULL DEFAULT 'fr'`,
+    `ALTER TABLE bibliotheque ADD COLUMN IF NOT EXISTS telechargements INT DEFAULT 0`,
+    // Ensure RLS and policies exist
+    `ALTER TABLE bibliotheque ENABLE ROW LEVEL SECURITY`,
+    `DO $$ BEGIN
+       IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='bibliotheque' AND policyname='biblio_read') THEN
+         CREATE POLICY biblio_read ON bibliotheque FOR SELECT USING (true);
+       END IF;
+     END $$`,
+    // Storage policy for bibliotheque bucket
+    `DO $$ BEGIN
+       IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='objects' AND policyname='biblio_storage_read') THEN
+         CREATE POLICY biblio_storage_read ON storage.objects FOR SELECT USING (bucket_id = 'bibliotheque');
+       END IF;
+     END $$`,
+    // Notify PostgREST to reload schema
+    `NOTIFY pgrst, 'reload schema'`,
+  ];
+
+  for (const sql of migrations) {
+    const { error } = await supabase.rpc('exec_migration', { sql_query: sql }).catch(() => ({ error: { message: 'rpc_not_found' } }));
+    if (error && error.message !== 'rpc_not_found') {
+      results.push({ sql: sql.slice(0, 60), error: error.message });
+    } else {
+      results.push({ sql: sql.slice(0, 60), ok: true });
+    }
+  }
+
+  res.json({ results });
+});
+
+// ─── Direct SQL via pg ────────────────────────────────────────────────────────
+app.post('/admin/migrate-pg', async (req, res) => {
+  const secret = req.headers['x-migration-secret'];
+  if (secret !== 'elhakim_migrate_2026') return res.status(403).json({ error: 'forbidden' });
+
+  const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+  if (!dbUrl) return res.status(500).json({ error: 'No DATABASE_URL env var' });
+
+  try {
+    const { Client } = require('pg');
+    const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+    await client.connect();
+
+    const migrations = [
+      `ALTER TABLE public.medecins ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}'`,
+      `ALTER TABLE public.bibliotheque ADD COLUMN IF NOT EXISTS auteur TEXT`,
+      `ALTER TABLE public.bibliotheque ADD COLUMN IF NOT EXISTS description TEXT`,
+      `ALTER TABLE public.bibliotheque ADD COLUMN IF NOT EXISTS categorie TEXT NOT NULL DEFAULT 'Général'`,
+      `ALTER TABLE public.bibliotheque ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'livre'`,
+      `ALTER TABLE public.bibliotheque ADD COLUMN IF NOT EXISTS couverture_url TEXT`,
+      `ALTER TABLE public.bibliotheque ADD COLUMN IF NOT EXISTS annee INT`,
+      `ALTER TABLE public.bibliotheque ADD COLUMN IF NOT EXISTS langue TEXT NOT NULL DEFAULT 'fr'`,
+      `ALTER TABLE public.bibliotheque ADD COLUMN IF NOT EXISTS telechargements INT DEFAULT 0`,
+      `ALTER TABLE public.bibliotheque ENABLE ROW LEVEL SECURITY`,
+      `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='bibliotheque' AND policyname='biblio_read') THEN CREATE POLICY biblio_read ON public.bibliotheque FOR SELECT USING (true); END IF; END $$`,
+      `NOTIFY pgrst, 'reload schema'`,
+    ];
+
+    const results = [];
+    for (const sql of migrations) {
+      try {
+        await client.query(sql);
+        results.push({ sql: sql.slice(0, 60), ok: true });
+      } catch (e) {
+        results.push({ sql: sql.slice(0, 60), error: e.message });
+      }
+    }
+    await client.end();
+    res.json({ results });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Startup sequence — delay 45s to let PostgREST finish reloading its schema cache
 cleanupOldArticles();
 setTimeout(async () => {
