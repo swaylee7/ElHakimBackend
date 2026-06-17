@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const crypto = require('crypto');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const Parser = require('rss-parser');
@@ -279,9 +280,9 @@ async function fetchLiveNews() {
 
         if (!feed.medicalOnly && !isMedical(combinedText, feed.lang)) continue;
 
-        const id = `rss-${Buffer.from(
+        const id = `rss-${crypto.createHash('md5').update(
           item.link || item.guid || titleText || String(Date.now())
-        ).toString('base64').slice(0, 22)}`;
+        ).digest('hex').slice(0, 20)}`;
 
         if (seenIds.has(id)) continue;
         seenIds.add(id);
