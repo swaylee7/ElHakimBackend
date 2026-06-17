@@ -1,6 +1,8 @@
+const http    = require('http');
 const express = require('express');
-const cors = require('cors');
-const crypto = require('crypto');
+const cors    = require('cors');
+const crypto  = require('crypto');
+const { Server: IOServer } = require('socket.io');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createClient } = require('@supabase/supabase-js');
 const Parser = require('rss-parser');
@@ -8,6 +10,52 @@ const Parser = require('rss-parser');
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+
+const server = http.createServer(app);
+const io = new IOServer(server, {
+  cors: { origin: '*', methods: ['GET', 'POST'] },
+  transports: ['websocket', 'polling'],
+});
+
+// ─── Signaling WebRTC ─────────────────────────────────────────────────────────
+const connectedDoctors = new Map(); // doctorId → socketId
+
+io.on('connection', (socket) => {
+  socket.on('register', (doctorId) => {
+    connectedDoctors.set(doctorId, socket.id);
+    socket.doctorId = doctorId;
+  });
+
+  socket.on('call:offer', ({ to, from, sdp, type, callerName }) => {
+    const target = connectedDoctors.get(to);
+    if (target) io.to(target).emit('call:incoming', { from, sdp, type, callerName });
+    else socket.emit('call:unavailable', { to });
+  });
+
+  socket.on('call:answer', ({ to, sdp }) => {
+    const target = connectedDoctors.get(to);
+    if (target) io.to(target).emit('call:answered', { sdp });
+  });
+
+  socket.on('call:ice', ({ to, candidate }) => {
+    const target = connectedDoctors.get(to);
+    if (target) io.to(target).emit('call:ice', { candidate });
+  });
+
+  socket.on('call:reject', ({ to }) => {
+    const target = connectedDoctors.get(to);
+    if (target) io.to(target).emit('call:rejected');
+  });
+
+  socket.on('call:end', ({ to }) => {
+    const target = connectedDoctors.get(to);
+    if (target) io.to(target).emit('call:ended');
+  });
+
+  socket.on('disconnect', () => {
+    if (socket.doctorId) connectedDoctors.delete(socket.doctorId);
+  });
+});
 
 const anthropic = new Anthropic();
 
@@ -537,4 +585,4 @@ setTimeout(async () => {
 setInterval(cronFetchAndEnqueue, 12 * 60 * 60 * 1000); // Every 12h
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`El Hakim Backend running on port ${PORT}`));
+server.listen(PORT, () => console.log(`El Hakim Backend running on port ${PORT}`));
